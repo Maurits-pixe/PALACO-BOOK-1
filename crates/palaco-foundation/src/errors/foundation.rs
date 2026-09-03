@@ -1,0 +1,1 @@
+//! Foundation error types.
