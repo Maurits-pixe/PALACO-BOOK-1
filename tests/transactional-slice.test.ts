@@ -6,7 +6,9 @@ import { createCaseKnowledgeTransaction } from "../src/lib/transaction";
 import { buildCaseTimeline } from "../src/lib/timeline";
 import { requireActor, type ActorContext } from "../src/lib/actor";
 
-function count(db:Database.Database,table:string){return (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as {n:number}).n;}\n\nconst actor:ActorContext={actorId:"user-1",role:"OWNER",authentication:"TEST"};
+function count(db:Database.Database,table:string){return (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as {n:number}).n;}
+
+const actor:ActorContext={actorId:"user-1",role:"OWNER",authentication:"TEST"};
 const input={
   case:{id:"case-1",title:"Case 1",objective:"Verify one atomic slice",status:"ACTIVE",createdAt:"2026-09-24T08:10:00.000Z"},
   knowledge:{id:"knowledge-1",caseId:"case-1",title:"Knowledge 1",content:"Verified content",status:"VERIFIED",version:1,sources:[{sourceId:"source-1",version:1,provenance:"VERIFIED"}],createdAt:"2026-09-24T08:11:00.000Z"},
