@@ -151,3 +151,40 @@ test("alpha mentor engine rejects non-synthetic data classifications",async()=>{
     caseId:"case-mentor",correlationId:"corr-realdata-001",question:"Do not process real-world sensitive data.",dataClassification:"REAL_WORLD" as never
   },user,mocks(),db),/MENTOR_ALPHA_SYNTHETIC_DATA_ONLY/);
 });
+
+
+test("unexpected model binding fails closed with minimal audit",async()=>{
+  const db=dbWithSlice();
+  const mismatched:MentorAdapter={
+    descriptor:{mentorId:"M12",adapterKind:"REMOTE",modelBinding:"expected-model",capabilityBinding:["evidence"],promptVersion:"v0.1"},
+    async analyze(input:MentorInput):Promise<MentorObservation>{
+      return {
+        observationId:"obs-binding-mismatch",
+        auditId:"audit-binding-mismatch",
+        correlationId:input.correlationId,
+        mentorId:"M12",
+        adapterKind:"REMOTE",
+        modelBinding:"unexpected-model",
+        capabilityBinding:["evidence"],
+        promptVersion:"v0.1",
+        inputRefs:input.inputRefs,
+        provenanceRefs:input.provenanceRefs,
+        inputHash:"a".repeat(64),
+        outputHash:"b".repeat(64),
+        output:output(),
+        uncertainties:[],
+        safetyFlags:[],
+        dissentSignals:[],
+        createdAt:"2026-09-24T09:10:00.000Z"
+      };
+    }
+  };
+  await assert.rejects(()=>runMentorCouncil({
+    caseId:"case-mentor",correlationId:"corr-binding-001",question:"Synthetic binding test.",dataClassification:"SYNTHETIC_ALPHA"
+  },user,[mismatched,mocks()[1],mocks()[2]],db),/MENTOR_BINDING_MISMATCH/);
+  const run=db.prepare("SELECT id,run_status AS runStatus,error_code AS errorCode FROM mentor_runs WHERE correlation_id=?").get("corr-binding-001") as {id:string;runStatus:string;errorCode:string};
+  assert.deepEqual({runStatus:run.runStatus,errorCode:run.errorCode},{runStatus:"FAILED",errorCode:"MENTOR_BINDING_MISMATCH"});
+  const audit=db.prepare("SELECT event_type AS eventType,output_hash AS outputHash FROM mentor_action_audit WHERE run_id=?").get(run.id) as {eventType:string;outputHash:string|null};
+  assert.equal(audit.eventType,"MENTOR_RUN_FAILED");
+  assert.equal(audit.outputHash,null);
+});
