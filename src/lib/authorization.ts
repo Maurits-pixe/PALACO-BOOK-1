@@ -3,10 +3,10 @@ export type Action="CASE_CREATE"|"KNOWLEDGE_CREATE"|"KNOWLEDGE_PUBLISH"|"AUDIT_R
 const grants:Record<Role,readonly Action[]>={
   OWNER:["CASE_CREATE","KNOWLEDGE_CREATE","KNOWLEDGE_PUBLISH","AUDIT_READ","MENTOR_RUN"],
   DEVELOPER:["CASE_CREATE","KNOWLEDGE_CREATE","AUDIT_READ","MENTOR_RUN"],
-  EDITOR:["CASE_CREATE","KNOWLEDGE_CREATE"],
+  EDITOR:["CASE_CREATE","KNOWLEDGE_CREATE","MENTOR_RUN"],
   REVIEWER:["KNOWLEDGE_PUBLISH","AUDIT_READ"],
   MENTOR:[],
-  USER:["CASE_CREATE","KNOWLEDGE_CREATE"]
+  USER:["CASE_CREATE","KNOWLEDGE_CREATE","MENTOR_RUN"]
 };
 export function authorize(role:Role,action:Action){return grants[role]?.includes(action)===true;}
 export function requireAuthorization(role:Role,action:Action){if(!authorize(role,action))throw new Error("AUTHORIZATION_DENIED");}
