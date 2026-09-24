@@ -52,3 +52,13 @@ test("live workflow records target ref and exact checked-out commit",()=>{
   assert.match(workflow,/CONFORMANCE_TARGET_SHA/);
   assert.match(workflow,/CONFORMANCE_EXPECTED_HEAD/);
 });
+
+
+test("live workflow validates provider configuration before live execution",()=>{
+  assert.match(workflow,/Validate provider configuration without exposing values/);
+  assert.match(workflow,/CONFORMANCE_CONFIGURATION_MISSING/);
+  assert.match(workflow,/CONFORMANCE_ENDPOINT_HTTPS_REQUIRED/);
+  assert.match(workflow,/steps\.provider_config\.outputs\.valid == 'true'/);
+  assert.match(workflow,/secrets\.PALACO_MENTOR_API_KEY/);
+  assert.doesNotMatch(workflow,/echo .*PALACO_MENTOR_API_KEY/);
+});
