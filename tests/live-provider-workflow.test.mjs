@@ -24,7 +24,7 @@ test("live workflow requires server-side provider secret and never injects synth
 
 test("persisted live report is metadata-only",()=>{
   const reportBlock=runner.slice(runner.indexOf("const report={"),runner.indexOf("writeReport(report);"));
-  assert.match(reportBlock,/testRunId/);
+  assert.match(runner,/const reportBase=\{testRunId:/);
   assert.match(reportBlock,/modelBinding/);
   assert.match(reportBlock,/inputHash/);
   assert.match(reportBlock,/outputHash/);
