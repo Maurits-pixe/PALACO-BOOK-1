@@ -120,9 +120,19 @@ export async function runMentorCouncil(request:MentorRunRequest,actor:ActorConte
     })();
     throw error;
   }
-  for(const observation of observations){
-    if(observation.correlationId!==request.correlationId)throw new Error("MENTOR_CORRELATION_MISMATCH");
-    if(observation.provenanceRefs.length===0)throw new Error("MENTOR_OBSERVATION_PROVENANCE_REQUIRED");
+  try{
+    for(const observation of observations){
+      if(observation.correlationId!==request.correlationId)throw new Error("MENTOR_CORRELATION_MISMATCH");
+      if(observation.provenanceRefs.length===0)throw new Error("MENTOR_OBSERVATION_PROVENANCE_REQUIRED");
+    }
+  }catch(error){
+    const timestamp=now();
+    const errorCode=error instanceof Error?error.message:"MENTOR_OBSERVATION_INVALID";
+    db.transaction(()=>{
+      db.prepare("UPDATE mentor_runs SET run_status='FAILED',safety_status='ESCALATE',error_code=?,completed_at=? WHERE id=?").run(errorCode,timestamp,runId);
+      insertActionAudit(db,{id:randomUUID(),runId,correlationId:request.correlationId,actorId:actor.actorId,caseId:request.caseId,knowledgeIds:knowledge.map(k=>k.id),eventType:"MENTOR_RUN_FAILED",inputHash,provenanceRefs,safetyOutcome:"ESCALATE",timestamp});
+    })();
+    throw error;
   }
   const synthesis=synthesize(observations);
   const safetyStatus=observations.some(o=>o.safetyFlags.length>0)?"ESCALATE":"PASS";
