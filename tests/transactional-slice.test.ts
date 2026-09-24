@@ -52,10 +52,22 @@ test("audit rows are immutable at database boundary",()=>{
   assert.throws(()=>db.prepare("DELETE FROM audit_events").run(),/AUDIT_APPEND_ONLY/);
 });
 
-test("actor adapter fails closed unless an authentication mode is explicitly configured",()=>{
-  const previous=process.env.PALACO_AUTH_MODE;
+test("actor adapter fails closed and accepts only a trusted upstream assertion",()=>{
+  const previousMode=process.env.PALACO_AUTH_MODE;
+  const previousToken=process.env.PALACO_TRUSTED_PROXY_TOKEN;
   delete process.env.PALACO_AUTH_MODE;
-  const request=new Request("http://localhost",{headers:{"x-palaco-actor-id":"spoof","x-palaco-role":"OWNER","x-palaco-authenticated":"true"}});
-  assert.throws(()=>requireActor(request),/IDENTITY_NOT_CONFIGURED/);
-  if(previous===undefined)delete process.env.PALACO_AUTH_MODE;else process.env.PALACO_AUTH_MODE=previous;
+  delete process.env.PALACO_TRUSTED_PROXY_TOKEN;
+
+  const spoof=new Request("http://localhost",{headers:{"x-palaco-actor-id":"spoof","x-palaco-role":"OWNER","x-palaco-authenticated":"true"}});
+  assert.throws(()=>requireActor(spoof),/IDENTITY_NOT_CONFIGURED/);
+
+  process.env.PALACO_AUTH_MODE="trusted-proxy";
+  process.env.PALACO_TRUSTED_PROXY_TOKEN="server-secret";
+  assert.throws(()=>requireActor(spoof),/AUTHENTICATION_REQUIRED/);
+
+  const trusted=new Request("http://localhost",{headers:{"x-palaco-proxy-token":"server-secret","x-palaco-actor-id":"user-42","x-palaco-role":"OWNER","x-palaco-authenticated":"true"}});
+  assert.deepEqual(requireActor(trusted),{actorId:"user-42",role:"OWNER",authentication:"TRUSTED_PROXY"});
+
+  if(previousMode===undefined)delete process.env.PALACO_AUTH_MODE;else process.env.PALACO_AUTH_MODE=previousMode;
+  if(previousToken===undefined)delete process.env.PALACO_TRUSTED_PROXY_TOKEN;else process.env.PALACO_TRUSTED_PROXY_TOKEN=previousToken;
 });
