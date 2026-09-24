@@ -111,3 +111,44 @@ test("binding mismatch is classified as BINDING",()=>{
   assert.equal(verdict.failureClass,"BINDING");
   assert.equal(verdict.failureCode,"MENTOR_BINDING_MISMATCH");
 });
+
+
+test("explicit preflight configuration failure outranks derived binding checks",()=>{
+  const report={
+    ...passingReport(),
+    modelBinding:"",
+    status:"FAIL",
+    contractValidation:"FAIL",
+    inputHash:null,
+    outputHash:null,
+    auditEventCount:0,
+    advisory:false,
+    humanDecisionRequired:false,
+    provenanceVerified:false,
+    remoteObservationVerified:false,
+    safetyOutcome:"UNKNOWN",
+    failureCode:"CONFORMANCE_CONFIGURATION_MISSING"
+  };
+  const {result,verdict}=execute(report);
+  assert.notEqual(result.status,0);
+  assert.equal(verdict.status,"FAILED");
+  assert.equal(verdict.failureClass,"CONFIGURATION");
+  assert.equal(verdict.failureCode,"CONFORMANCE_CONFIGURATION_MISSING");
+});
+
+test("target integrity mismatch still outranks an explicit report failure",()=>{
+  const report={
+    ...passingReport(),
+    targetHead:"d".repeat(40),
+    modelBinding:"",
+    status:"FAIL",
+    contractValidation:"FAIL",
+    inputHash:null,
+    outputHash:null,
+    failureCode:"CONFORMANCE_CONFIGURATION_MISSING"
+  };
+  const {result,verdict}=execute(report);
+  assert.notEqual(result.status,0);
+  assert.equal(verdict.failureClass,"CONFIGURATION");
+  assert.equal(verdict.failureCode,"TARGET_HEAD_MISMATCH");
+});
