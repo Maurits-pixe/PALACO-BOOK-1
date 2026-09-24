@@ -27,7 +27,7 @@ const expectedModel=process.env.PALACO_MENTOR_MODEL;
 
 function classify(code:string|undefined|null){
   if(!code)return "UNKNOWN";
-  if(/CONFIGURATION|NOT_CONFIGURED|DISABLED|HTTPS_REQUIRED/.test(code))return "CONFIGURATION";
+  if(/CONFIGURATION|NOT_CONFIGURED|DISABLED|HTTPS_REQUIRED|TARGET_(REF|HEAD)_MISMATCH/.test(code))return "CONFIGURATION";
   if(/TIMEOUT|HTTP_5|PROVIDER|NETWORK/.test(code))return "NETWORK_PROVIDER";
   if(/CONTRACT_INVALID|RESPONSE|JSON|SCHEMA/.test(code))return "RESPONSE_SCHEMA";
   if(/PROVENANCE/.test(code))return "PROVENANCE";
