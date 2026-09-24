@@ -1,0 +1,112 @@
+name: Live Provider Conformance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-provider-conformance
+  cancel-in-progress: false
+
+jobs:
+  conformance:
+    name: Synthetic live provider contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: live-provider-conformance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Resolve target evidence
+        id: target
+        shell: bash
+        run: |
+          echo "ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify failure boundaries without live calls
+        run: npx tsx --test tests/mentor-adapters.test.ts tests/mentor-engine.test.ts
+
+      - name: Validate provider configuration without exposing values
+        id: provider_config
+        shell: bash
+        env:
+          PALACO_MENTOR_ENDPOINT: ${{ vars.PALACO_MENTOR_ENDPOINT }}
+          PALACO_MENTOR_MODEL: ${{ vars.PALACO_MENTOR_MODEL }}
+          PALACO_MENTOR_API_KEY: ${{ secrets.PALACO_MENTOR_API_KEY }}
+          TARGET_REF: ${{ steps.target.outputs.ref }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          code=""
+          if [ -z "$PALACO_MENTOR_ENDPOINT" ] || [ -z "$PALACO_MENTOR_MODEL" ] || [ -z "$PALACO_MENTOR_API_KEY" ]; then
+            code="CONFORMANCE_CONFIGURATION_MISSING"
+          elif [[ "$PALACO_MENTOR_ENDPOINT" != https://* ]]; then
+            code="CONFORMANCE_ENDPOINT_HTTPS_REQUIRED"
+          fi
+          if [ -n "$code" ]; then
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            jq -n \
+              --arg runId "$GITHUB_RUN_ID" \
+              --arg targetRef "$TARGET_REF" \
+              --arg targetHead "$TARGET_SHA" \
+              --arg model "$PALACO_MENTOR_MODEL" \
+              --arg failureCode "$code" \
+              '{testRunId:$runId,targetRef:$targetRef,targetHead:$targetHead,modelBinding:$model,status:"FAIL",inputHash:null,outputHash:null,durationMs:0,safetyOutcome:"UNKNOWN",contractValidation:"FAIL",auditEventCount:0,advisory:false,humanDecisionRequired:false,provenanceVerified:false,remoteObservationVerified:false,failureCode:$failureCode}' \
+              > live-provider-conformance-report.json
+          else
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run exactly one synthetic live-provider conformance case
+        if: steps.provider_config.outputs.valid == 'true'
+        id: live
+        continue-on-error: true
+        env:
+          PALACO_MENTOR_REMOTE_ENABLED: "true"
+          PALACO_MENTOR_ENDPOINT: ${{ vars.PALACO_MENTOR_ENDPOINT }}
+          PALACO_MENTOR_MODEL: ${{ vars.PALACO_MENTOR_MODEL }}
+          PALACO_MENTOR_PROMPT_VERSION: ${{ vars.PALACO_MENTOR_PROMPT_VERSION || 'mentor-v0.1' }}
+          PALACO_MENTOR_API_KEY: ${{ secrets.PALACO_MENTOR_API_KEY }}
+          CONFORMANCE_TARGET_REF: ${{ steps.target.outputs.ref }}
+          CONFORMANCE_TARGET_SHA: ${{ steps.target.outputs.sha }}
+          LIVE_CONFORMANCE_REPORT: live-provider-conformance-report.json
+        run: npm run live:provider-conformance
+
+      - name: Evaluate formal result conditions
+        if: always()
+        env:
+          PALACO_MENTOR_MODEL: ${{ vars.PALACO_MENTOR_MODEL }}
+          CONFORMANCE_EXPECTED_REF: ${{ steps.target.outputs.ref }}
+          CONFORMANCE_EXPECTED_HEAD: ${{ steps.target.outputs.sha }}
+          LIVE_CONFORMANCE_REPORT: live-provider-conformance-report.json
+          LIVE_CONFORMANCE_VERDICT: live-provider-conformance-verdict.json
+        run: npm run live:provider-result
+
+      - name: Add minimal conformance summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f live-provider-conformance-verdict.json ]; then
+            echo "### Live Provider Conformance" >> "$GITHUB_STEP_SUMMARY"
+            jq '{status,releaseStatus,failureClass,failureCode,evidence}' live-provider-conformance-verdict.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload minimal conformance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-provider-conformance-${{ github.run_id }}
+          path: |
+            live-provider-conformance-report.json
+            live-provider-conformance-verdict.json
+          if-no-files-found: ignore
+          retention-days: 7

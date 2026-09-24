@@ -1,0 +1,65 @@
+{
+  "version": "0.1",
+  "status_on_pass": "LIVE PROVIDER CONTRACT: VERIFIED FOR SYNTHETIC FIXTURES",
+  "status_on_ready": "LIVE PROVIDER CONTRACT: READY FOR MANUAL DISPATCH — NOT YET VERIFIED",
+  "required_scope": {
+    "data_classification": "SYNTHETIC_ALPHA",
+    "workflow_event": "workflow_dispatch",
+    "target_ref": "feature/levensader-vertical-slice"
+  },
+  "required_evidence": [
+    "testRunId",
+    "targetRef",
+    "targetHead",
+    "modelBinding",
+    "status",
+    "inputHash",
+    "outputHash",
+    "durationMs",
+    "safetyOutcome",
+    "contractValidation",
+    "auditEventCount"
+  ],
+  "pass_conditions": {
+    "status": "PASS",
+    "contractValidation": "PASS",
+    "inputHash": "sha256-hex-64",
+    "outputHash": "sha256-hex-64",
+    "auditEventCount_minimum": 2,
+    "safetyOutcome_allowed": [
+      "PASS",
+      "ESCALATE"
+    ],
+    "advisory_required": true,
+    "human_decision_required": true,
+    "provenance_required": true,
+    "remote_observation_required": true
+  },
+  "failure_classes": [
+    "CONFIGURATION",
+    "NETWORK_PROVIDER",
+    "RESPONSE_SCHEMA",
+    "PROVENANCE",
+    "SAFETY",
+    "AUDIT_INTEGRITY",
+    "BINDING",
+    "REPLAY",
+    "UNKNOWN"
+  ],
+  "forbidden_persisted_fields": [
+    "apiKey",
+    "authorization",
+    "question",
+    "prompt",
+    "fullPrompt",
+    "providerResponse",
+    "output"
+  ],
+  "non_claims": [
+    "production_ready",
+    "clinical_suitability",
+    "general_security",
+    "real_health_data_safe",
+    "general_runtime_conformance"
+  ]
+}
