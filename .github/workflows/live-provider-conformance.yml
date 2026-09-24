@@ -1,0 +1,58 @@
+name: Live Provider Conformance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-provider-conformance
+  cancel-in-progress: false
+
+jobs:
+  conformance:
+    name: Synthetic live provider contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: live-provider-conformance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify failure boundaries without live calls
+        run: npx tsx --test tests/mentor-adapters.test.ts tests/mentor-engine.test.ts
+
+      - name: Run exactly one synthetic live-provider conformance case
+        env:
+          PALACO_MENTOR_REMOTE_ENABLED: "true"
+          PALACO_MENTOR_ENDPOINT: ${{ vars.PALACO_MENTOR_ENDPOINT }}
+          PALACO_MENTOR_MODEL: ${{ vars.PALACO_MENTOR_MODEL }}
+          PALACO_MENTOR_PROMPT_VERSION: ${{ vars.PALACO_MENTOR_PROMPT_VERSION || 'mentor-v0.1' }}
+          PALACO_MENTOR_API_KEY: ${{ secrets.PALACO_MENTOR_API_KEY }}
+          LIVE_CONFORMANCE_REPORT: live-provider-conformance-report.json
+        run: npm run live:provider-conformance
+
+      - name: Add minimal conformance summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f live-provider-conformance-report.json ]; then
+            echo "### Live Provider Conformance" >> "$GITHUB_STEP_SUMMARY"
+            jq '{testRunId,modelBinding,status,inputHash,outputHash,durationMs,safetyOutcome,contractValidation}' live-provider-conformance-report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload minimal conformance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-provider-conformance-${{ github.run_id }}
+          path: live-provider-conformance-report.json
+          if-no-files-found: ignore
+          retention-days: 7
