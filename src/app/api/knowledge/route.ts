@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server";import { createKnowledge } from "@/lib/mutations";import { store } from "@/lib/store";import type { Role } from "@/lib/authorization";
+export async function GET(req:Request){const caseId=new URL(req.url).searchParams.get("caseId")??"";return NextResponse.json(store.listKnowledge(caseId));}
+export async function POST(req:Request){try{const body=await req.json();const actor=req.headers.get("x-palaco-actor")??"anonymous";const role=(req.headers.get("x-palaco-role")??"USER") as Role;return NextResponse.json(createKnowledge(body,actor,role),{status:201});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"INVALID_REQUEST"},{status:403});}}
