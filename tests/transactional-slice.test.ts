@@ -6,7 +6,7 @@ import { createCaseKnowledgeTransaction } from "../src/lib/transaction";
 import { buildCaseTimeline } from "../src/lib/timeline";
 import { requireActor, type ActorContext } from "../src/lib/actor";
 
-const actor:ActorContext={actorId:"user-1",role:"OWNER",authentication:"TEST"};
+function count(db:Database.Database,table:string){return (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as {n:number}).n;}\n\nconst actor:ActorContext={actorId:"user-1",role:"OWNER",authentication:"TEST"};
 const input={
   case:{id:"case-1",title:"Case 1",objective:"Verify one atomic slice",status:"ACTIVE",createdAt:"2026-09-24T08:10:00.000Z"},
   knowledge:{id:"knowledge-1",caseId:"case-1",title:"Knowledge 1",content:"Verified content",status:"VERIFIED",version:1,sources:[{sourceId:"source-1",version:1,provenance:"VERIFIED"}],createdAt:"2026-09-24T08:11:00.000Z"},
@@ -36,10 +36,10 @@ test("mid-transaction source conflict rolls back case knowledge provenance and a
   applyMigrations(db);
   db.prepare("INSERT INTO sources(id,version,uri,title,checksum,created_at) VALUES(?,?,?,?,?,?)").run("source-1",1,"urn:existing","Existing","sha256:existing","2026-09-24T08:00:00.000Z");
   assert.throws(()=>createCaseKnowledgeTransaction(input,actor,db));
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cases").get().n,0);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM knowledge_objects").get().n,0);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM provenance_records").get().n,0);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM audit_events").get().n,0);
+  assert.equal(count(db,"cases"),0);
+  assert.equal(count(db,"knowledge_objects"),0);
+  assert.equal(count(db,"provenance_records"),0);
+  assert.equal(count(db,"audit_events"),0);
 });
 
 test("audit rows are immutable at database boundary",()=>{
