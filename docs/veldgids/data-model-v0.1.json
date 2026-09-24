@@ -1,0 +1,14 @@
+{
+  "version": "0.1",
+  "entities": ["knowledge_object","source","person","organization","case","mentor","prompt","report","attachment","relationship","audit_event"],
+  "knowledge_object_status": ["CONCEPT","IN_REVIEW","VERIFIED","PUBLISHED","ARCHIVED","REVOKED"],
+  "relationship_types": ["supports","contradicts","derived_from","related_to","explains","references","used_in","reviewed_by","created_by"],
+  "roles": ["OWNER","DEVELOPER","EDITOR","REVIEWER","MENTOR","USER"],
+  "principles": [
+    "authentication_is_not_authorization",
+    "provenance_is_required",
+    "published_objects_are_versioned",
+    "no_silent_mutation",
+    "human_remains_decision_maker"
+  ]
+}

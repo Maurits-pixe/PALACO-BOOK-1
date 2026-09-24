@@ -1,0 +1,17 @@
+{
+  "version": "0.1",
+  "prompt_status": ["DRAFT","TESTING","REVIEW","PUBLISHED","DEPRECATED","ARCHIVED"],
+  "workflow_nodes": ["INPUT","RETRIEVE","CLASSIFY","ROUTE","MENTOR_ANALYZE","SYNTHESIZE","HUMAN_REVIEW","REPORT","EXPORT","TERMINATE"],
+  "invocation_outcomes": ["COMPLETED","PARTIAL","FAILED","ESCALATED","CANCELLED"],
+  "report_formats": ["HTML","MARKDOWN","PDF","JSON"],
+  "principles": [
+    "published_artifacts_are_immutable",
+    "execution_references_exact_versions",
+    "external_side_effects_require_authorization",
+    "source_analysis_boundary_is_preserved",
+    "evaluation_is_contextual",
+    "observability_is_not_authority",
+    "3d_is_presentation_only",
+    "2d_accessible_equivalent_required"
+  ]
+}
