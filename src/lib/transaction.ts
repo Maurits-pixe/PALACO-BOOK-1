@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type Database from "better-sqlite3";
 import { z } from "zod";
 import { database } from "./sqlite";
 import { sqliteRepositories } from "./sqlite-repositories";
@@ -12,7 +13,7 @@ const inputSchema=z.object({case:caseSchema,knowledge:knowledgeObjectSchema,sour
 
 function event(actor:ActorContext,action:string,object:string,version:number,refs:string[]):AuditEvent{return {eventId:randomUUID(),actor:actor.actorId,action,object,objectVersion:version,timestamp:new Date().toISOString(),authorizationContext:`${actor.authentication}:${actor.role}`,outcome:"ALLOWED",provenanceRefs:refs};}
 
-export function createCaseKnowledgeTransaction(input:unknown,actor:ActorContext){
+export function createCaseKnowledgeTransaction(input:unknown,actor:ActorContext,db:Database.Database=database()){
   requireAuthorization(actor.role,"CASE_CREATE");
   requireAuthorization(actor.role,"KNOWLEDGE_CREATE");
   const parsed=inputSchema.parse(input);
@@ -22,13 +23,11 @@ export function createCaseKnowledgeTransaction(input:unknown,actor:ActorContext)
   if(ref.sourceId!==parsed.source.id||ref.version!==parsed.source.version||ref.provenance!==parsed.provenance.status)throw new Error("PROVENANCE_REFERENCE_MISMATCH");
   assertPublishable(parsed.knowledge);
   if(parsed.knowledge.status==="PUBLISHED")requireAuthorization(actor.role,"KNOWLEDGE_PUBLISH");
-  const db=database();
   const repos=sqliteRepositories(db);
   return db.transaction(()=>{
     repos.cases.insert(parsed.case);
     repos.sources.insert(parsed.source);
     repos.knowledge.insert(parsed.knowledge);
-    db.prepare("INSERT INTO source_refs(knowledge_id,source_id,source_version,provenance_state) VALUES(?,?,?,?)").run(parsed.knowledge.id,parsed.source.id,parsed.source.version,parsed.provenance.status);
     repos.provenance.insert({...parsed.provenance,knowledgeId:parsed.knowledge.id,sourceId:parsed.source.id,sourceVersion:parsed.source.version});
     repos.audit.append(event(actor,"CASE_CREATE",parsed.case.id,1,[]));
     repos.audit.append(event(actor,"SOURCE_ATTACH",parsed.source.id,parsed.source.version,[parsed.source.id]));
