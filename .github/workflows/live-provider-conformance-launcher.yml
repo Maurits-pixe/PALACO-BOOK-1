@@ -11,7 +11,7 @@ on:
       expected_head:
         description: Exact release-candidate commit SHA
         required: true
-        default: 5d3efb7a4534ccac337002de83f07d1a4fb925bb
+        default: 8cd9eed6b601c4f1f2e4cb09df4bb30ca8074b89
         type: string
 
 permissions:
