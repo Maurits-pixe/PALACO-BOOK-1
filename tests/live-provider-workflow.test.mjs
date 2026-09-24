@@ -35,3 +35,20 @@ test("persisted live report is metadata-only",()=>{
   assert.doesNotMatch(reportBlock,/output:/);
   assert.doesNotMatch(reportBlock,/apiKey/);
 });
+
+
+test("live workflow delegates final status to the formal evaluator",()=>{
+  assert.match(workflow,/continue-on-error:\s*true/);
+  assert.match(workflow,/Evaluate formal result conditions/);
+  assert.match(workflow,/npm run live:provider-result/);
+  assert.match(workflow,/LIVE_CONFORMANCE_VERDICT/);
+  assert.match(workflow,/live-provider-conformance-verdict\.json/);
+});
+
+test("live workflow records target ref and exact checked-out commit",()=>{
+  assert.match(workflow,/Resolve target evidence/);
+  assert.match(workflow,/git rev-parse HEAD/);
+  assert.match(workflow,/CONFORMANCE_TARGET_REF/);
+  assert.match(workflow,/CONFORMANCE_TARGET_SHA/);
+  assert.match(workflow,/CONFORMANCE_EXPECTED_HEAD/);
+});
