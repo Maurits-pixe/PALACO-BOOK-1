@@ -19,7 +19,7 @@ export function createCaseKnowledgeTransaction(input:unknown,actor:ActorContext,
   const parsed=inputSchema.parse(input);
   if(parsed.knowledge.caseId!==parsed.case.id)throw new Error("CASE_KNOWLEDGE_MISMATCH");
   if(parsed.knowledge.sources.length!==1)throw new Error("SINGLE_SOURCE_SLICE_REQUIRED");
-  const ref=parsed.knowledge.sources[0];
+  const ref=parsed.knowledge.sources[0]!;
   if(ref.sourceId!==parsed.source.id||ref.version!==parsed.source.version||ref.provenance!==parsed.provenance.status)throw new Error("PROVENANCE_REFERENCE_MISMATCH");
   assertPublishable(parsed.knowledge);
   if(parsed.knowledge.status==="PUBLISHED")requireAuthorization(actor.role,"KNOWLEDGE_PUBLISH");
