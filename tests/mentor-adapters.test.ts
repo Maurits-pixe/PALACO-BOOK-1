@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { createServer,type RequestListener } from "node:http";
 import type { AddressInfo } from "node:net";
 import { RemoteMentorAdapter,configuredMentorAdapters } from "../src/lib/mentor-adapters";
 import type { MentorInput } from "../src/lib/mentor-contract";
@@ -17,7 +17,7 @@ const input:MentorInput={
   knowledge:[{id:"knowledge-synthetic",title:"Synthetic battery note",content:"Synthetic test content only.",version:1,sourceIds:["source-synthetic"]}]
 };
 
-async function withServer(handler:Parameters<typeof createServer>[0],fn:(url:string)=>Promise<void>){
+async function withServer(handler:RequestListener,fn:(url:string)=>Promise<void>){
   const server=createServer(handler);
   await new Promise<void>((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",()=>resolve());});
   const address=server.address() as AddressInfo;
