@@ -16,7 +16,7 @@ function writeReport(report:Record<string,unknown>){
 function safeFailure(error:unknown){
   if(error instanceof Error){
     if(error.name==="ZodError")return "MENTOR_PROVIDER_CONTRACT_INVALID";
-    if(/^MENTOR_[A-Z0-9_]+$/.test(error.message))return error.message;
+    if(/^(MENTOR|CONFORMANCE)_[A-Z0-9_]+$/.test(error.message))return error.message;
   }
   return "LIVE_PROVIDER_CONFORMANCE_FAILED";
 }
