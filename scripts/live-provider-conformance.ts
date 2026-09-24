@@ -36,7 +36,8 @@ let remoteObservationVerified=false;
 try{
   if(process.env.PALACO_MENTOR_REMOTE_ENABLED!=="true")throw new Error("CONFORMANCE_CONFIGURATION_MISSING");
   modelBinding=required("PALACO_MENTOR_MODEL");
-  required("PALACO_MENTOR_ENDPOINT");
+  const endpoint=required("PALACO_MENTOR_ENDPOINT");
+  if(!/^https:\/\//i.test(endpoint))throw new Error("CONFORMANCE_ENDPOINT_HTTPS_REQUIRED");
   required("PALACO_MENTOR_API_KEY");
 
   const db=new Database(":memory:");
