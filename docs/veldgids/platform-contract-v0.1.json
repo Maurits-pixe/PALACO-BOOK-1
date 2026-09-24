@@ -1,0 +1,8 @@
+{
+  "version":"0.1",
+  "roles":["OWNER","DEVELOPER","EDITOR","REVIEWER","MENTOR","USER"],
+  "planes":["PRESENTATION","APPLICATION_API","AI_ORCHESTRATION","KNOWLEDGE_RETRIEVAL","GOVERNANCE_AUDIT","PERSISTENCE"],
+  "release_gates":["BUILD","TEST","SECURITY","PROVENANCE","HUMAN_REVIEW","RELEASE"],
+  "principles":["authentication_is_not_authorization","source_analysis_boundary","versioned_publication","provenance_continuity","preserve_dissent","authorized_external_side_effects","observability_is_not_authority","3d_is_presentation_only"],
+  "mentor_runtime":["QUESTION","CONTEXT_BOUNDARY","ROUTING","PARALLEL_MENTORS","COMPARISON","SYNTHESIS","SAFETY_REVIEW","RESPONSE"]
+}
