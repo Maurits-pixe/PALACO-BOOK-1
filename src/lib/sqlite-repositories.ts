@@ -9,7 +9,7 @@ export function sqliteRepositories(db:Database.Database){
     get(id){return db.prepare("SELECT id,title,objective,status,created_at AS createdAt FROM cases WHERE id=?").get(id) as CaseRecord|undefined}
   };
   const knowledge:KnowledgeRepository={
-    insert(v){db.prepare("INSERT INTO knowledge_objects(id,case_id,title,content,status,version,created_at) VALUES(?,?,?,?,?,?,?)").run(v.id,v.caseId,v.title,v.content,v.status,v.version,v.createdAt)},
+    insert(v){db.prepare("INSERT INTO knowledge_objects(id,case_id,title,content,status,version,created_at) VALUES(?,?,?,?,?,?,?)").run(v.id,v.caseId,v.title,v.content,v.status,v.version,v.createdAt);const ref=db.prepare("INSERT INTO source_refs(knowledge_id,source_id,source_version,provenance_state) VALUES(?,?,?,?)");for(const s of v.sources)ref.run(v.id,s.sourceId,s.version,s.provenance)},
     listByCase(caseId){const rows=db.prepare("SELECT id,case_id AS caseId,title,content,status,version,created_at AS createdAt FROM knowledge_objects WHERE case_id=? ORDER BY created_at").all(caseId) as Omit<KnowledgeObject,"sources">[];const refs=db.prepare("SELECT source_id AS sourceId,source_version AS version,provenance_state AS provenance FROM source_refs WHERE knowledge_id=? ORDER BY source_id,source_version");return rows.map(r=>({...r,sources:refs.all(r.id)})) as KnowledgeObject[]}
   };
   const sources:SourceRepository={
