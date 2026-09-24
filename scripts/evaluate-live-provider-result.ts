@@ -47,18 +47,23 @@ catch{report={failureCode:"CONFORMANCE_REPORT_MISSING"};}
 const failures:string[]=[];
 if(report.targetRef!==expectedRef)failures.push("TARGET_REF_MISMATCH");
 if(!expectedHead||report.targetHead!==expectedHead)failures.push("TARGET_HEAD_MISMATCH");
-if(!expectedModel||report.modelBinding!==expectedModel)failures.push("MENTOR_BINDING_MISMATCH");
-if(report.status!=="PASS")failures.push(report.failureCode??"LIVE_PROVIDER_CONFORMANCE_FAILED");
-if(report.contractValidation!=="PASS")failures.push("MENTOR_PROVIDER_CONTRACT_INVALID");
-if(!sha(report.inputHash))failures.push("MENTOR_INPUT_HASH_INVALID");
-if(!sha(report.outputHash))failures.push("MENTOR_OUTPUT_HASH_INVALID");
-if(typeof report.durationMs!=="number"||report.durationMs<0)failures.push("CONFORMANCE_TIMING_INVALID");
-if(!["PASS","ESCALATE"].includes(report.safetyOutcome??""))failures.push("MENTOR_SAFETY_INVALID");
-if((report.auditEventCount??0)<2)failures.push("MENTOR_AUDIT_INCOMPLETE");
-if(report.advisory!==true)failures.push("MENTOR_ADVISORY_STATUS_REQUIRED");
-if(report.humanDecisionRequired!==true)failures.push("MENTOR_HUMAN_DECISION_REQUIRED");
-if(report.provenanceVerified!==true)failures.push("MENTOR_PROVENANCE_REQUIRED");
-if(report.remoteObservationVerified!==true)failures.push("MENTOR_REMOTE_OBSERVATION_MISSING");
+
+if(report.status!=="PASS"){
+  failures.push(report.failureCode??"LIVE_PROVIDER_CONFORMANCE_FAILED");
+}else{
+  if(report.failureCode)failures.push(report.failureCode);
+  if(!expectedModel||report.modelBinding!==expectedModel)failures.push("MENTOR_BINDING_MISMATCH");
+  if(report.contractValidation!=="PASS")failures.push("MENTOR_PROVIDER_CONTRACT_INVALID");
+  if(!sha(report.inputHash))failures.push("MENTOR_INPUT_HASH_INVALID");
+  if(!sha(report.outputHash))failures.push("MENTOR_OUTPUT_HASH_INVALID");
+  if(typeof report.durationMs!=="number"||report.durationMs<0)failures.push("CONFORMANCE_TIMING_INVALID");
+  if(!["PASS","ESCALATE"].includes(report.safetyOutcome??""))failures.push("MENTOR_SAFETY_INVALID");
+  if((report.auditEventCount??0)<2)failures.push("MENTOR_AUDIT_INCOMPLETE");
+  if(report.advisory!==true)failures.push("MENTOR_ADVISORY_STATUS_REQUIRED");
+  if(report.humanDecisionRequired!==true)failures.push("MENTOR_HUMAN_DECISION_REQUIRED");
+  if(report.provenanceVerified!==true)failures.push("MENTOR_PROVENANCE_REQUIRED");
+  if(report.remoteObservationVerified!==true)failures.push("MENTOR_REMOTE_OBSERVATION_MISSING");
+}
 
 const primary=failures[0]??null;
 const verdict={
