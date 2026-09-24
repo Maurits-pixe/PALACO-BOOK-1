@@ -22,11 +22,16 @@ function safeFailure(error:unknown){
 }
 
 const started=Date.now();
-const reportBase={testRunId:process.env.GITHUB_RUN_ID??randomUUID()};
+const reportBase={testRunId:process.env.GITHUB_RUN_ID??randomUUID(),targetRef:process.env.CONFORMANCE_TARGET_REF??"UNKNOWN",targetHead:process.env.CONFORMANCE_TARGET_SHA??"UNKNOWN"};
 let modelBinding="UNAVAILABLE";
 let inputHash="";
 let outputHash="";
 let safetyOutcome="UNKNOWN";
+let auditEventCount=0;
+let advisory=false;
+let humanDecisionRequired=false;
+let provenanceVerified=false;
+let remoteObservationVerified=false;
 
 try{
   if(process.env.PALACO_MENTOR_REMOTE_ENABLED!=="true")throw new Error("CONFORMANCE_CONFIGURATION_MISSING");
@@ -102,6 +107,11 @@ try{
   if(auditSchema.includes("question")||auditSchema.includes("output_json"))throw new Error("MENTOR_AUDIT_CONTENT_LEAK");
   const auditCount=(db.prepare("SELECT COUNT(*) AS n FROM mentor_action_audit WHERE run_id=?").get(result.runId) as {n:number}).n;
   if(auditCount<2)throw new Error("MENTOR_AUDIT_INCOMPLETE");
+  auditEventCount=auditCount;
+  advisory=result.consensus.proposedResponse.status==="ADVISORY";
+  humanDecisionRequired=result.consensus.proposedResponse.humanDecisionRequired===true;
+  provenanceVerified=result.provenance.provenanceRefs.length>0;
+  remoteObservationVerified=true;
 
   inputHash=remote.inputHash;
   outputHash=remote.outputHash;
@@ -115,7 +125,13 @@ try{
     outputHash,
     durationMs:Date.now()-started,
     safetyOutcome,
-    contractValidation:"PASS"
+    contractValidation:"PASS",
+    auditEventCount,
+    advisory,
+    humanDecisionRequired,
+    provenanceVerified,
+    remoteObservationVerified,
+    failureCode:null
   };
   writeReport(report);
   console.log("LIVE_PROVIDER_CONFORMANCE=PASS");
@@ -129,7 +145,13 @@ try{
     outputHash:outputHash||null,
     durationMs:Date.now()-started,
     safetyOutcome,
-    contractValidation:"FAIL"
+    contractValidation:"FAIL",
+    auditEventCount,
+    advisory,
+    humanDecisionRequired,
+    provenanceVerified,
+    remoteObservationVerified,
+    failureCode:code
   });
   console.error("LIVE_PROVIDER_CONFORMANCE="+code);
   process.exitCode=1;
