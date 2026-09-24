@@ -121,9 +121,16 @@ export async function runMentorCouncil(request:MentorRunRequest,actor:ActorConte
     throw error;
   }
   try{
-    for(const observation of observations){
+    for(let index=0;index<observations.length;index++){
+      const observation=observations[index];
+      const descriptor=adapters[index]?.descriptor;
+      if(!observation||!descriptor)throw new Error("MENTOR_OBSERVATION_DESCRIPTOR_MISSING");
       if(observation.correlationId!==request.correlationId)throw new Error("MENTOR_CORRELATION_MISMATCH");
       if(observation.provenanceRefs.length===0)throw new Error("MENTOR_OBSERVATION_PROVENANCE_REQUIRED");
+      if(observation.mentorId!==descriptor.mentorId)throw new Error("MENTOR_BINDING_MISMATCH");
+      if(observation.modelBinding!==descriptor.modelBinding)throw new Error("MENTOR_BINDING_MISMATCH");
+      if(observation.promptVersion!==descriptor.promptVersion)throw new Error("MENTOR_BINDING_MISMATCH");
+      if(JSON.stringify([...observation.capabilityBinding].sort())!==JSON.stringify([...descriptor.capabilityBinding].sort()))throw new Error("MENTOR_BINDING_MISMATCH");
     }
   }catch(error){
     const timestamp=now();
