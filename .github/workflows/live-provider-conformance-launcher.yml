@@ -8,6 +8,11 @@ on:
         required: true
         default: feature/levensader-vertical-slice
         type: string
+      expected_head:
+        description: Exact release-candidate commit SHA
+        required: true
+        default: 4c037001e5296e79c642016e95ad3b2100da73f1
+        type: string
 
 permissions:
   contents: read
@@ -34,17 +39,36 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Resolve target evidence
+      - name: Resolve and pin target evidence
         id: target
         shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_head }}
+          TARGET_REF: ${{ inputs.target_ref }}
+          MODEL_BINDING: ${{ vars.PALACO_MENTOR_MODEL }}
         run: |
-          echo "ref=${{ inputs.target_ref }}" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          actual="$(git rev-parse HEAD)"
+          echo "ref=${TARGET_REF}" >> "$GITHUB_OUTPUT"
+          echo "sha=${actual}" >> "$GITHUB_OUTPUT"
+          if [ "$actual" = "$EXPECTED_HEAD" ]; then
+            echo "match=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "match=false" >> "$GITHUB_OUTPUT"
+            jq -n \
+              --arg runId "$GITHUB_RUN_ID" \
+              --arg targetRef "$TARGET_REF" \
+              --arg targetHead "$actual" \
+              --arg model "$MODEL_BINDING" \
+              '{testRunId:$runId,targetRef:$targetRef,targetHead:$targetHead,modelBinding:$model,status:"FAIL",inputHash:null,outputHash:null,durationMs:0,safetyOutcome:"UNKNOWN",contractValidation:"FAIL",auditEventCount:0,advisory:false,humanDecisionRequired:false,provenanceVerified:false,remoteObservationVerified:false,failureCode:"TARGET_HEAD_MISMATCH"}' \
+              > live-provider-conformance-report.json
+          fi
 
       - name: Verify failure boundaries without live calls
+        if: steps.target.outputs.match == 'true'
         run: npx tsx --test tests/mentor-adapters.test.ts tests/mentor-engine.test.ts
 
       - name: Run exactly one synthetic live-provider conformance case
+        if: steps.target.outputs.match == 'true'
         id: live
         continue-on-error: true
         env:
@@ -62,8 +86,8 @@ jobs:
         if: always()
         env:
           PALACO_MENTOR_MODEL: ${{ vars.PALACO_MENTOR_MODEL }}
-          CONFORMANCE_EXPECTED_REF: ${{ steps.target.outputs.ref }}
-          CONFORMANCE_EXPECTED_HEAD: ${{ steps.target.outputs.sha }}
+          CONFORMANCE_EXPECTED_REF: ${{ inputs.target_ref }}
+          CONFORMANCE_EXPECTED_HEAD: ${{ inputs.expected_head }}
           LIVE_CONFORMANCE_REPORT: live-provider-conformance-report.json
           LIVE_CONFORMANCE_VERDICT: live-provider-conformance-verdict.json
         run: npm run live:provider-result
