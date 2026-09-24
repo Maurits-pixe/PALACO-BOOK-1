@@ -1,0 +1,7 @@
+{
+  "version":"0.1",
+  "domains":["identity","knowledge","library","cases","people","mentors","prompts","workflows","research","evaluations","reports","observability"],
+  "mutation_audit_fields":["actor","authorization_context","object_version","timestamp","provenance"],
+  "default_authorization":"DENY",
+  "external_action":"EXPLICIT_AUTHORIZATION_REQUIRED"
+}
