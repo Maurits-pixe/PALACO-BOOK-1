@@ -1,0 +1,3 @@
+import {mentorRegistry} from "../src/domain/mentors";
+const surfaces=["Levensader","Library","Cases","People & Organizations","Mentor Council","AI Studio","Research Lab","Reports","Observatory"];
+export default function Home(){return <main><header><p className="eyebrow">PALACO · DE MENTALE VELDGIDS</p><h1>Command Center</h1><p>Evidence-aware workspace. AI adviseert; de gebruiker behoudt beslissingsbevoegdheid.</p></header><section className="grid">{surfaces.map(x=><article key={x}><span>READY FOR IMPLEMENTATION</span><h2>{x}</h2></article>)}</section><section><h2>Mentor Council</h2><p>{mentorRegistry.length} slots geregistreerd · 16 permanent · 8 freelance/model-agnostic.</p></section></main>}
