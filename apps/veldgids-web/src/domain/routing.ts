@@ -1,0 +1,3 @@
+import type {MentorSlot} from "./mentors";
+export interface RoutingPlan{routeId:string;questionHash:string;selectedMentorIds:string[];reasonCodes:string[];evidenceScope:string[];policyVersion:string;humanDecisionRequired:true}
+export function createRoutingPlan(input:{routeId:string;questionHash:string;mentors:MentorSlot[];evidenceScope:string[];policyVersion:string}):RoutingPlan{return{routeId:input.routeId,questionHash:input.questionHash,selectedMentorIds:input.mentors.map(m=>m.id),reasonCodes:["EXPLICIT_SELECTION"],evidenceScope:input.evidenceScope,policyVersion:input.policyVersion,humanDecisionRequired:true}}

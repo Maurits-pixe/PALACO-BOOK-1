@@ -1,0 +1,32 @@
+name: Veldgids Runtime CI
+on:
+  pull_request:
+    paths:
+      - "apps/veldgids-web/**"
+      - ".github/workflows/veldgids-runtime-ci.yml"
+  push:
+    branches: ["feature/veldgids-runtime-v0-1"]
+    paths:
+      - "apps/veldgids-web/**"
+      - ".github/workflows/veldgids-runtime-ci.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/veldgids-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm install
+      - name: Contract tests
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
