@@ -33,4 +33,6 @@ AI confidence, mentor consensus, CI and evidence completion do not substitute fo
 
 See the [PALACO filtered governance synthesis](https://github.com/Maurits-pixe/PALACO/blob/codex/palaco-filtered-governance-20261007/docs/governance/PALACO-FILTERED-GOVERNANCE-2026-10.md) for source heads, conflict classification and open-PR status.
 
-**Not merged, published or deployed:** this block is on the review branch only.
+This block does not create authority. History remains addressable: revalidation appends a new record and never erases the prior knowledge state.
+
+**Not merged, published or deployed:** this note is on the review branch only.
