@@ -34,7 +34,7 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Verify failure boundaries without live calls
-        run: npx tsx --test tests/mentor-adapters.test.ts tests/mentor-engine.test.ts
+        run: npx tsx --test tests/mentor-adapters.test.ts tests/mentor-engine.test.ts tests/live-provider-runner.test.ts
 
       - name: Validate provider configuration without exposing values
         id: provider_config
