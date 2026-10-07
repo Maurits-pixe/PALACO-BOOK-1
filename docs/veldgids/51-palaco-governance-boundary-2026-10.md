@@ -21,7 +21,7 @@ source -> extraction -> transformation -> knowledge object
       -> authorization decision -> bounded execution -> trace/history
 ```
 
-AI confidence, mentor consensus, CI and evidence completion do not substitute for the explicit authorization step. RIO remains a communication surface; ELIXER remains distinct capability/catalog terminology. The spelling `VORM9EVING` is retained exactly where used.
+AI confidence, mentor consensus, CI and evidence completion do not substitute for the explicit authorization step. RIO remains a communication surface; ELIXER remains distinct capability/catalog terminology. The spelling `VORM9EVIN9` is retained exactly where used.
 
 ## Classification
 
