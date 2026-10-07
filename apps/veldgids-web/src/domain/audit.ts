@@ -1,0 +1,2 @@
+export interface AuditEvent{eventId:string;actor:string;action:string;object:string;objectVersion:string;timestamp:string;requestId:string;authorizationContext:string;outcome:"ALLOW"|"DENY"|"SUCCESS"|"FAILURE";provenanceRefs:string[]}
+export const appendAudit=(ledger:readonly AuditEvent[],event:AuditEvent):readonly AuditEvent[]=>Object.freeze([...ledger,Object.freeze({...event,provenanceRefs:Object.freeze([...event.provenanceRefs]) as unknown as string[]})]);
