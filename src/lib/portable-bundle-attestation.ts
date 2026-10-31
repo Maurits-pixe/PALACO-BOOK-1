@@ -2,6 +2,7 @@ import {
   createHash,
   createPrivateKey,
   createPublicKey,
+  type KeyObject,
   sign as cryptoSign,
   verify as cryptoVerify
 } from "node:crypto";
@@ -59,8 +60,10 @@ function sha256(input:Buffer|string){
   return createHash("sha256").update(input).digest("hex");
 }
 
-function publicKeyFingerprint(publicKeyPemOrKey:Parameters<typeof createPublicKey>[0]){
-  const key=createPublicKey(publicKeyPemOrKey);
+function publicKeyFingerprint(keyInput:string|Buffer|KeyObject){
+  const key=typeof keyInput==="string"||Buffer.isBuffer(keyInput)
+    ?createPublicKey(keyInput)
+    :keyInput.type==="public"?keyInput:createPublicKey(keyInput);
   if(key.asymmetricKeyType!=="ed25519")throw new Error("ATTESTATION_KEY_NOT_ED25519");
   const der=key.export({type:"spki",format:"der"});
   return sha256(der);
