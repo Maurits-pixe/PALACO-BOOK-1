@@ -124,7 +124,16 @@ function mutationAuditAction(operation:EnvelopeRow["operationType"]){
 }
 
 function evaluateEnvelopeState(envelope:EnvelopeRow,db:Database.Database){
-  const evaluated=evaluateEnvelopeState(envelope,db);
+  const state=expectedAndObserved(envelope,db);
+  const expectedHash=hash(state.expected);
+  const observedHash=state.observed?hash(state.observed):null;
+  const mutationAction=mutationAuditAction(envelope.operationType);
+  const mutationAuditPresent=Boolean(db.prepare("SELECT 1 FROM audit_events WHERE action=? AND object_id=? AND object_version=? LIMIT 1")
+    .get(mutationAction,envelope.targetId,state.expectedVersion));
+  const consumeAuditPresent=Boolean(db.prepare("SELECT 1 FROM audit_events WHERE action='REMEDIATION_EXECUTION_CONSUME' AND object_id=? AND object_version=? LIMIT 1")
+    .get(envelope.envelopeId,envelope.version));
+  const stateMatches=expectedHash===observedHash&&state.observedVersion===state.expectedVersion;
+  const verdict:VerificationVerdict=stateMatches&&mutationAuditPresent&&consumeAuditPresent?"MATCH":"MISMATCH";
   return {...state,expectedHash,observedHash,mutationAuditPresent,consumeAuditPresent,stateMatches,verdict};
 }
 
@@ -173,16 +182,7 @@ export function recordPostExecutionVerification(envelopeId:string,actor:ActorCon
   const previous=latestVerification(id,db);
   if(previous?.status==="CLOSED")throw new Error("VERIFICATION_CLOSED_TERMINAL");
 
-  const state=expectedAndObserved(envelope,db);
-  const expectedHash=hash(state.expected);
-  const observedHash=state.observed?hash(state.observed):null;
-  const mutationAction=mutationAuditAction(envelope.operationType);
-  const mutationAuditPresent=Boolean(db.prepare("SELECT 1 FROM audit_events WHERE action=? AND object_id=? AND object_version=? LIMIT 1")
-    .get(mutationAction,envelope.targetId,state.expectedVersion));
-  const consumeAuditPresent=Boolean(db.prepare("SELECT 1 FROM audit_events WHERE action='REMEDIATION_EXECUTION_CONSUME' AND object_id=? AND object_version=? LIMIT 1")
-    .get(envelope.envelopeId,envelope.version));
-  const stateMatches=expectedHash===observedHash&&state.observedVersion===state.expectedVersion;
-  const verdict:VerificationVerdict=stateMatches&&mutationAuditPresent&&consumeAuditPresent?"MATCH":"MISMATCH";
+  const evaluated=evaluateEnvelopeState(envelope,db);
   const value:VerificationRecord={
     verificationId:id,version:(previous?.version??0)+1,envelopeId:envelope.envelopeId,envelopeVersion:envelope.version,
     signalId:signal.signalId,signalVersion:signal.version,targetType:envelope.targetType,targetId:envelope.targetId,
