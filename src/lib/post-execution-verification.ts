@@ -123,6 +123,11 @@ function mutationAuditAction(operation:EnvelopeRow["operationType"]){
   return operation==="RELATION_REVOKE"?"KNOWLEDGE_RELATION_REVOKE":"KNOWLEDGE_RELATION_EVOLVE";
 }
 
+function evaluateEnvelopeState(envelope:EnvelopeRow,db:Database.Database){
+  const evaluated=evaluateEnvelopeState(envelope,db);
+  return {...state,expectedHash,observedHash,mutationAuditPresent,consumeAuditPresent,stateMatches,verdict};
+}
+
 function latestVerification(id:string,db:Database.Database):VerificationRecord|undefined{
   const row=db.prepare(`
     SELECT verification_id AS verificationId,version,envelope_id AS envelopeId,envelope_version AS envelopeVersion,
@@ -181,13 +186,13 @@ export function recordPostExecutionVerification(envelopeId:string,actor:ActorCon
   const value:VerificationRecord={
     verificationId:id,version:(previous?.version??0)+1,envelopeId:envelope.envelopeId,envelopeVersion:envelope.version,
     signalId:signal.signalId,signalVersion:signal.version,targetType:envelope.targetType,targetId:envelope.targetId,
-    expectedVersion:state.expectedVersion,observedVersion:state.observedVersion,expectedHash,observedHash,verdict,status:"RECORDED",
-    evidence:{stateMatches,mutationAuditPresent,consumeAuditPresent,operationType:envelope.operationType,payloadHash:envelope.payloadHash},
+    expectedVersion:evaluated.expectedVersion,observedVersion:evaluated.observedVersion,expectedHash:evaluated.expectedHash,observedHash:evaluated.observedHash,verdict:evaluated.verdict,status:"RECORDED",
+    evidence:{stateMatches:evaluated.stateMatches,mutationAuditPresent:evaluated.mutationAuditPresent,consumeAuditPresent:evaluated.consumeAuditPresent,operationType:envelope.operationType,payloadHash:envelope.payloadHash},
     closureNote:null,createdAt:new Date().toISOString(),actor:actor.actorId,supersedesVersion:previous?.version??null
   };
   return db.transaction(()=>{
     insertVerification(db,value);
-    appendAudit(db,audit(actor,verdict==="MATCH"?"REMEDIATION_VERIFY_MATCH":"REMEDIATION_VERIFY_MISMATCH",value));
+    appendAudit(db,audit(actor,evaluated.verdict==="MATCH"?"REMEDIATION_VERIFY_MATCH":"REMEDIATION_VERIFY_MISMATCH",value));
     return value;
   })();
 }
@@ -205,6 +210,12 @@ export function closeVerifiedRemediation(verificationIdValue:string,note:string,
   const signal=signalForEnvelope(envelope,db);
   if(signal.signalId!==current.signalId)throw new Error("VERIFICATION_SIGNAL_DRIFT");
   if(signal.status!=="ACKNOWLEDGED")throw new Error("REVIEW_SIGNAL_ACK_REQUIRED");
+  const reevaluated=evaluateEnvelopeState(envelope,db);
+  if(
+    reevaluated.verdict!=="MATCH"||
+    reevaluated.expectedHash!==current.expectedHash||
+    reevaluated.observedHash!==current.observedHash
+  )throw new Error("VERIFICATION_STALE_AT_CLOSURE");
 
   const closed:VerificationRecord={
     ...current,version:current.version+1,signalVersion:signal.version,status:"CLOSED",closureNote:note.trim(),
