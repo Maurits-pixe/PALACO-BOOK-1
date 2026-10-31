@@ -8,6 +8,7 @@ function statusFor(error:unknown){
   if(message==="AUTHENTICATION_REQUIRED"||message==="IDENTITY_NOT_CONFIGURED")return 401;
   if(message==="AUTHORIZATION_DENIED")return 403;
   if(message==="SOURCE_VERSION_NOT_FOUND")return 404;
+  if(message==="SOURCE_CAUSE_NOT_CONFIRMED")return 409;
   return 400;
 }
 
