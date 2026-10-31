@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS review_signals(
   created_at TEXT NOT NULL,
   actor TEXT NOT NULL,
   supersedes_version INTEGER,
-  PRIMARY KEY(signal_id,version)
+  PRIMARY KEY(signal_id,version),
+  FOREIGN KEY(cause_source_id,cause_source_version) REFERENCES sources(id,version)
 );
 
 CREATE TRIGGER IF NOT EXISTS review_signals_no_update
