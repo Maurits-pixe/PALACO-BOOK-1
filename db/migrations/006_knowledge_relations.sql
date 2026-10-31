@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS knowledge_relations(
   target_knowledge_id TEXT NOT NULL,
   target_object_version INTEGER NOT NULL CHECK(target_object_version>0),
   relation_type TEXT NOT NULL CHECK(relation_type IN (
-    'supports','contradicts','derived_from','related_to','explains','references','used_in','reviewed_by','created_by'
+    'supports','contradicts','derived_from','related_to','explains','references','used_in'
   )),
   provenance_state TEXT NOT NULL CHECK(provenance_state IN ('UNKNOWN','PARTIAL','TRACEABLE','VERIFIED','REVOKED')),
   evidence_refs_json TEXT NOT NULL,
