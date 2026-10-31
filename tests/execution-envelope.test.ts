@@ -134,7 +134,7 @@ test("prepare and authorize actions are audited with proposal and payload-hash p
   const proposalId=acceptedKnowledgeProposal(db,signalId,nextKnowledge(base));
   const envelope=prepareExecutionEnvelope(proposalId,developer,db);
   authorizeExecutionEnvelope(envelope.envelopeId,{validForSeconds:300},owner,db);
-  const rows=db.prepare("SELECT action,provenance_refs_json AS refs FROM audit_events WHERE action LIKE 'REMEDIATION_EXECUTION_%' ORDER BY timestamp,event_id").all() as Array<{action:string;refs:string}>;
+  const rows=db.prepare("SELECT action,object_version AS version,provenance_refs_json AS refs FROM audit_events WHERE action LIKE 'REMEDIATION_EXECUTION_%' ORDER BY object_version").all() as Array<{action:string;version:number;refs:string}>;
   assert.deepEqual(rows.map(x=>x.action),["REMEDIATION_EXECUTION_PREPARE","REMEDIATION_EXECUTION_AUTHORIZE"]);
   assert.ok(rows.every(x=>JSON.parse(x.refs).includes(envelope.payloadHash)));
   db.close();
