@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 import {applyMigrations} from "../src/lib/sqlite";
 import {createCaseKnowledgeTransaction} from "../src/lib/transaction";
 import {createKnowledgeRelation} from "../src/lib/knowledge-graph";
-import {analyzeImpact,listOpenReviewSignals,recordImpactSignals} from "../src/lib/impact-analysis";
+import {analyzeImpact,listOpenReviewSignals,listReviewSignalHistory,recordImpactSignals,transitionReviewSignal} from "../src/lib/impact-analysis";
 import type {ActorContext} from "../src/lib/actor";
 
 const owner:ActorContext={actorId:"owner-1",role:"OWNER",authentication:"TEST"};
@@ -102,5 +102,23 @@ test("editor may preview but cannot record; user cannot run impact analysis",()=
 test("unknown source versions fail closed",()=>{
   const {db}=fixture();
   assert.throws(()=>analyzeImpact({causeKind:"SOURCE_REVOKED",source:{id:"missing",version:1}},owner,db),/SOURCE_VERSION_NOT_FOUND/);
+  db.close();
+});
+
+
+test("review signal acknowledgement and resolution are append-only and terminal",()=>{
+  const {db}=fixture();
+  const input={causeKind:"SOURCE_REVOKED" as const,source:{id:"source-a",version:1},maxDepth:1};
+  const recorded=recordImpactSignals(input,reviewer,db).recorded;
+  const signal=recorded[0]!;
+  const acknowledged=transitionReviewSignal(signal.signalId,"ACKNOWLEDGED",reviewer,db);
+  assert.equal(acknowledged.version,2);
+  assert.equal(acknowledged.supersedesVersion,1);
+  const resolved=transitionReviewSignal(signal.signalId,"RESOLVED",reviewer,db);
+  assert.equal(resolved.version,3);
+  assert.equal(resolved.supersedesVersion,2);
+  assert.deepEqual(listReviewSignalHistory(signal.signalId,db).map(x=>x.status),["OPEN","ACKNOWLEDGED","RESOLVED"]);
+  assert.throws(()=>transitionReviewSignal(signal.signalId,"ACKNOWLEDGED",reviewer,db),/REVIEW_SIGNAL_RESOLVED_TERMINAL/);
+  assert.ok(!listOpenReviewSignals(db).some((x:any)=>x.signalId===signal.signalId));
   db.close();
 });
