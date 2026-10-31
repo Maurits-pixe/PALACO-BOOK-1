@@ -235,3 +235,51 @@ export function listExecutionEnvelopeHistory(envelopeId:string,db:Database.Datab
     FROM remediation_execution_envelopes WHERE envelope_id=? ORDER BY version
   `).all(envelopeId).map(mapEnvelope);
 }
+
+
+export function assertExecutionEnvelopeConsumable(
+  envelopeId:string,
+  at:Date=new Date(),
+  db:Database.Database=database()
+):ExecutionEnvelope{
+  const current=latestEnvelope(envelopeId,db);
+  if(!current)throw new Error("EXECUTION_ENVELOPE_NOT_FOUND");
+  if(current.status==="CONSUMED")throw new Error("EXECUTION_ENVELOPE_ALREADY_CONSUMED");
+  if(current.status!=="AUTHORIZED")throw new Error("EXECUTION_ENVELOPE_NOT_AUTHORIZED");
+  if(!current.authorizedAt||!current.expiresAt)throw new Error("EXECUTION_AUTHORIZATION_INCOMPLETE");
+  const now=at.getTime();
+  const authorizedAt=Date.parse(current.authorizedAt);
+  const expiresAt=Date.parse(current.expiresAt);
+  if(!Number.isFinite(now)||!Number.isFinite(authorizedAt)||!Number.isFinite(expiresAt))throw new Error("EXECUTION_TEMPORAL_STATE_INVALID");
+  if(now<authorizedAt)throw new Error("EXECUTION_BEFORE_AUTHORIZATION");
+  if(now>expiresAt)throw new Error("EXECUTION_AUTHORIZATION_EXPIRED");
+
+  const proposal=latestAcceptedProposal(current.proposalId,db);
+  if(proposal.version!==current.proposalVersion)throw new Error("EXECUTION_PROPOSAL_CHANGED");
+  const payload=validateExecutableProposal(proposal,db);
+  if(payloadHash(payload)!==current.payloadHash)throw new Error("EXECUTION_PAYLOAD_HASH_MISMATCH");
+  return current;
+}
+
+export function appendConsumedExecutionEnvelope(
+  current:ExecutionEnvelope,
+  actor:ActorContext,
+  at:Date=new Date(),
+  db:Database.Database=database()
+):ExecutionEnvelope{
+  requireAuthorization(actor.role,"REMEDIATION_EXECUTE");
+  const latest=latestEnvelope(current.envelopeId,db);
+  if(!latest)throw new Error("EXECUTION_ENVELOPE_NOT_FOUND");
+  if(latest.version!==current.version||latest.status!=="AUTHORIZED")throw new Error("EXECUTION_ENVELOPE_STATE_CHANGED");
+  const next:ExecutionEnvelope={
+    ...latest,
+    version:latest.version+1,
+    status:"CONSUMED",
+    createdAt:at.toISOString(),
+    actor:actor.actorId,
+    supersedesVersion:latest.version
+  };
+  insertEnvelope(db,next);
+  appendAudit(db,audit(actor,"REMEDIATION_EXECUTION_CONSUME",next));
+  return next;
+}
