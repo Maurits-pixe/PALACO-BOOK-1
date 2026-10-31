@@ -271,6 +271,26 @@ export function transitionReviewSignal(signalId:string,status:"ACKNOWLEDGED"|"RE
     throw new Error("REVIEW_SIGNAL_TRANSITION_DENIED");
   }
 
+  if(status==="RESOLVED"){
+    const executed=db.prepare(`
+      SELECT e.envelope_id AS envelopeId
+      FROM remediation_execution_envelopes e
+      JOIN remediation_proposals p ON p.proposal_id=e.proposal_id AND p.version=e.proposal_version
+      JOIN remediation_work_items w ON w.work_id=p.work_id
+      WHERE w.signal_id=? AND e.status='CONSUMED'
+      ORDER BY e.version DESC LIMIT 1
+    `).get(signalId) as {envelopeId:string}|undefined;
+    if(executed){
+      const verification=db.prepare(`
+        SELECT status,verdict FROM remediation_verifications
+        WHERE envelope_id=? ORDER BY version DESC LIMIT 1
+      `).get(executed.envelopeId) as {status:string;verdict:string}|undefined;
+      if(!verification||verification.status!=="CLOSED"||verification.verdict!=="MATCH"){
+        throw new Error("POST_EXECUTION_VERIFICATION_REQUIRED");
+      }
+    }
+  }
+
   const next:ReviewSignalRecord={...current,version:current.version+1,status,createdAt:new Date().toISOString(),actor:actor.actorId,supersedesVersion:current.version};
   return db.transaction(()=>{
     db.prepare(`
