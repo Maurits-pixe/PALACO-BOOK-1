@@ -6,7 +6,7 @@ import { requireAuthorization } from "./authorization";
 import type { ActorContext } from "./actor";
 import type { AuditEvent } from "./domain";
 
-export const relationTypes=["supports","contradicts","derived_from","related_to","explains","references","used_in","reviewed_by","created_by"] as const;
+export const relationTypes=["supports","contradicts","derived_from","related_to","explains","references","used_in"] as const;
 export type RelationType=(typeof relationTypes)[number];
 export type RelationStatus="ACTIVE"|"REVOKED";
 export type RelationProvenance="UNKNOWN"|"PARTIAL"|"TRACEABLE"|"VERIFIED"|"REVOKED";
