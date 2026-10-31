@@ -75,7 +75,7 @@ test("preview has no side effects; recording is authorized, append-only and idem
   const {db}=fixture();
   const input={causeKind:"SOURCE_CHANGED" as const,source:{id:"source-a",version:1},maxDepth:3};
   const preview=analyzeImpact(input,reviewer,db);
-  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM review_signals").get().count,0);
+  assert.equal((db.prepare("SELECT COUNT(*) AS count FROM review_signals").get() as {count:number}).count,0);
   const first=recordImpactSignals(input,reviewer,db);
   assert.equal(first.recorded.length,preview.candidates.length);
   const second=recordImpactSignals(input,reviewer,db);
