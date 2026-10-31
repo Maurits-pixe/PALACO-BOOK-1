@@ -27,7 +27,7 @@ BEGIN
   INSERT OR IGNORE INTO source_states(
     source_id,source_version,state_version,status,replacement_source_version,reason,created_at,actor,supersedes_state_version
   ) VALUES(
-    NEW.id,NEW.version,1,'ACTIVE',NULL,'SOURCE_REGISTERED',NEW.created_at,'RUNTIME',NULL
+    NEW.id,NEW.version,1,'ACTIVE',NULL,'SOURCE_REGISTERED',NEW.created_at,'DATABASE_TRIGGER',NULL
   );
 END;
 
