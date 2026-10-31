@@ -134,6 +134,20 @@ test("state drift after execution is recorded as MISMATCH and cannot close",()=>
   db.close();
 });
 
+
+test("a previously matching verification cannot close after later target drift",()=>{
+  const {db,base,signalId}=setup();
+  const consumed=execute(db,base,signalId);
+  const verification=recordPostExecutionVerification(consumed.envelopeId,reviewerA,db);
+  assert.equal(verification.verdict,"MATCH");
+  evolveKnowledge(nextKnowledge({...base,title:"Remediated",content:"v2",version:2,sources:[{sourceId:"source-1",version:2,provenance:"VERIFIED" as const}],createdAt:"2026-10-31T10:10:00.000Z"},3,"Later edit"),owner,db);
+  transitionReviewSignal(signalId,"ACKNOWLEDGED",reviewerB,db);
+  assert.throws(()=>closeVerifiedRemediation(verification.verificationId,"stale match must not close",reviewerA,db),/VERIFICATION_STALE_AT_CLOSURE/);
+  assert.equal(listPostExecutionVerificationHistory(verification.verificationId,db).at(-1)?.status,"RECORDED");
+  assert.equal(listReviewSignalHistory(signalId,db).at(-1)?.status,"ACKNOWLEDGED");
+  db.close();
+});
+
 test("verification ledger is append-only",()=>{
   const {db,base,signalId}=setup();
   const consumed=execute(db,base,signalId);
