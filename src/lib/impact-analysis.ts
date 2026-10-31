@@ -209,3 +209,79 @@ export function listOpenReviewSignals(db:Database.Database=database()){
     ORDER BY s.created_at,s.signal_id
   `).all().map((row:any)=>({...row,path:JSON.parse(row.pathJson),pathJson:undefined}));
 }
+
+
+export type ReviewSignalStatus="OPEN"|"ACKNOWLEDGED"|"RESOLVED";
+export type ReviewSignalRecord={
+  signalId:string;
+  version:number;
+  causeKind:ImpactCauseKind;
+  causeSourceId:string;
+  causeSourceVersion:number;
+  targetType:ImpactTargetType;
+  targetId:string;
+  targetVersion:number;
+  impactKind:ImpactKind;
+  severity:ImpactSeverity;
+  path:string[];
+  status:ReviewSignalStatus;
+  createdAt:string;
+  actor:string;
+  supersedesVersion:number|null;
+};
+
+function mapReviewSignal(row:any):ReviewSignalRecord{
+  return {
+    signalId:row.signalId,version:row.version,causeKind:row.causeKind,
+    causeSourceId:row.causeSourceId,causeSourceVersion:row.causeSourceVersion,
+    targetType:row.targetType,targetId:row.targetId,targetVersion:row.targetVersion,
+    impactKind:row.impactKind,severity:row.severity,path:JSON.parse(row.pathJson) as string[],
+    status:row.status,createdAt:row.createdAt,actor:row.actor,supersedesVersion:row.supersedesVersion??null
+  };
+}
+
+export function listReviewSignalHistory(signalId:string,db:Database.Database=database()):ReviewSignalRecord[]{
+  return db.prepare(`
+    SELECT signal_id AS signalId,version,cause_kind AS causeKind,cause_source_id AS causeSourceId,
+      cause_source_version AS causeSourceVersion,target_type AS targetType,target_id AS targetId,
+      target_version AS targetVersion,impact_kind AS impactKind,severity,path_json AS pathJson,
+      status,created_at AS createdAt,actor,supersedes_version AS supersedesVersion
+    FROM review_signals WHERE signal_id=? ORDER BY version
+  `).all(signalId).map(mapReviewSignal);
+}
+
+export function transitionReviewSignal(signalId:string,status:"ACKNOWLEDGED"|"RESOLVED",actor:ActorContext,db:Database.Database=database()):ReviewSignalRecord{
+  requireAuthorization(actor.role,"IMPACT_SIGNAL_WRITE");
+  const row=db.prepare(`
+    SELECT signal_id AS signalId,version,cause_kind AS causeKind,cause_source_id AS causeSourceId,
+      cause_source_version AS causeSourceVersion,target_type AS targetType,target_id AS targetId,
+      target_version AS targetVersion,impact_kind AS impactKind,severity,path_json AS pathJson,
+      status,created_at AS createdAt,actor,supersedes_version AS supersedesVersion
+    FROM review_signals WHERE signal_id=? ORDER BY version DESC LIMIT 1
+  `).get(signalId);
+  if(!row)throw new Error("REVIEW_SIGNAL_NOT_FOUND");
+  const current=mapReviewSignal(row);
+  const allowed=current.status==="OPEN"&&status==="ACKNOWLEDGED"||current.status==="ACKNOWLEDGED"&&status==="RESOLVED";
+  if(!allowed){
+    if(current.status==="RESOLVED")throw new Error("REVIEW_SIGNAL_RESOLVED_TERMINAL");
+    throw new Error("REVIEW_SIGNAL_TRANSITION_DENIED");
+  }
+
+  const next:ReviewSignalRecord={...current,version:current.version+1,status,createdAt:new Date().toISOString(),actor:actor.actorId,supersedesVersion:current.version};
+  return db.transaction(()=>{
+    db.prepare(`
+      INSERT INTO review_signals(signal_id,version,cause_kind,cause_source_id,cause_source_version,target_type,target_id,target_version,impact_kind,severity,path_json,status,created_at,actor,supersedes_version)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(next.signalId,next.version,next.causeKind,next.causeSourceId,next.causeSourceVersion,next.targetType,next.targetId,next.targetVersion,next.impactKind,next.severity,JSON.stringify(next.path),next.status,next.createdAt,next.actor,next.supersedesVersion);
+    const event:AuditEvent={
+      eventId:randomUUID(),actor:actor.actorId,
+      action:status==="ACKNOWLEDGED"?"IMPACT_SIGNAL_ACKNOWLEDGE":"IMPACT_SIGNAL_RESOLVE",
+      object:next.signalId,objectVersion:next.version,timestamp:next.createdAt,
+      authorizationContext:`${actor.authentication}:${actor.role}`,outcome:"ALLOWED",
+      provenanceRefs:[`${next.causeSourceId}@${next.causeSourceVersion}`]
+    };
+    db.prepare("INSERT INTO audit_events(event_id,actor,action,object_id,object_version,timestamp,authorization_context,outcome,provenance_refs_json) VALUES(?,?,?,?,?,?,?,?,?)")
+      .run(event.eventId,event.actor,event.action,event.object,event.objectVersion,event.timestamp,event.authorizationContext,event.outcome,JSON.stringify(event.provenanceRefs));
+    return next;
+  })();
+}
