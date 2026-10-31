@@ -5,6 +5,7 @@ import {applyMigrations} from "../src/lib/sqlite";
 import {createCaseKnowledgeTransaction} from "../src/lib/transaction";
 import {createKnowledgeRelation} from "../src/lib/knowledge-graph";
 import {analyzeImpact,listOpenReviewSignals,listReviewSignalHistory,recordImpactSignals,transitionReviewSignal} from "../src/lib/impact-analysis";
+import {registerSourceVersion,transitionSourceState} from "../src/lib/source-ledger";
 import type {ActorContext} from "../src/lib/actor";
 
 const owner:ActorContext={actorId:"owner-1",role:"OWNER",authentication:"TEST"};
@@ -35,12 +36,22 @@ function fixture(){
   return {db,a,b,c,d};
 }
 
+function confirmCause(db:Database.Database,kind:"SOURCE_REVOKED"|"SOURCE_CHANGED",sourceId:string){
+  if(kind==="SOURCE_REVOKED"){
+    transitionSourceState({sourceId,sourceVersion:1,status:"REVOKED",reason:"test revocation"},owner,db);
+    return;
+  }
+  registerSourceVersion({id:sourceId,version:2,uri:`https://example.test/${sourceId}/v2`,title:`${sourceId} v2`,checksum:`sum-${sourceId}-v2`,createdAt:"2026-10-31T06:30:00.000Z"},owner,db);
+  transitionSourceState({sourceId,sourceVersion:1,status:"SUPERSEDED",replacementSourceVersion:2,reason:"test replacement"},owner,db);
+}
+
 function find(report:ReturnType<typeof analyzeImpact>,type:string,id:string,kind:string){
   return report.candidates.find(x=>x.targetType===type&&x.targetId===id&&x.impactKind===kind);
 }
 
 test("impact analysis propagates dependencies but keeps contextual edges non-recursive",()=>{
   const {db}=fixture();
+  confirmCause(db,"SOURCE_REVOKED","source-a");
   const report=analyzeImpact({causeKind:"SOURCE_REVOKED",source:{id:"source-a",version:1},maxDepth:6},owner,db);
   assert.equal(report.automaticStateChanges,false);
   assert.ok(find(report,"KNOWLEDGE_VERSION","A","DIRECT_SOURCE"));
@@ -64,6 +75,7 @@ test("dependency traversal is bounded and cycle-safe",()=>{
   seed(db,"B","source-b");
   createKnowledgeRelation({relationId:"r-ab",source:{knowledgeId:"A",version:1},target:{knowledgeId:"B",version:1},relationType:"supports",provenance:"VERIFIED",evidenceRefs:["e1"]},owner,db);
   createKnowledgeRelation({relationId:"r-ba",source:{knowledgeId:"B",version:1},target:{knowledgeId:"A",version:1},relationType:"supports",provenance:"VERIFIED",evidenceRefs:["e2"]},owner,db);
+  confirmCause(db,"SOURCE_CHANGED","source-a");
   const report=analyzeImpact({causeKind:"SOURCE_CHANGED",source:{id:"source-a",version:1},maxDepth:12},owner,db);
   const graphKnowledge=report.candidates.filter(x=>x.targetType==="KNOWLEDGE_VERSION"&&x.impactKind==="GRAPH_PROPAGATION");
   assert.equal(graphKnowledge.filter(x=>x.targetId==="B").length,1);
@@ -73,6 +85,7 @@ test("dependency traversal is bounded and cycle-safe",()=>{
 
 test("preview has no side effects; recording is authorized, append-only and idempotent",()=>{
   const {db}=fixture();
+  confirmCause(db,"SOURCE_CHANGED","source-a");
   const input={causeKind:"SOURCE_CHANGED" as const,source:{id:"source-a",version:1},maxDepth:3};
   const preview=analyzeImpact(input,reviewer,db);
   assert.equal((db.prepare("SELECT COUNT(*) AS count FROM review_signals").get() as {count:number}).count,0);
@@ -90,6 +103,7 @@ test("preview has no side effects; recording is authorized, append-only and idem
 
 test("editor may preview but cannot record; user cannot run impact analysis",()=>{
   const {db}=fixture();
+  confirmCause(db,"SOURCE_REVOKED","source-a");
   const input={causeKind:"SOURCE_REVOKED" as const,source:{id:"source-a",version:1},maxDepth:2};
   const editor:ActorContext={actorId:"editor-1",role:"EDITOR",authentication:"TEST"};
   const user:ActorContext={actorId:"user-1",role:"USER",authentication:"TEST"};
@@ -108,6 +122,7 @@ test("unknown source versions fail closed",()=>{
 
 test("review signal acknowledgement and resolution are append-only and terminal",()=>{
   const {db}=fixture();
+  confirmCause(db,"SOURCE_REVOKED","source-a");
   const input={causeKind:"SOURCE_REVOKED" as const,source:{id:"source-a",version:1},maxDepth:1};
   const recorded=recordImpactSignals(input,reviewer,db).recorded;
   const signal=recorded[0]!;
@@ -120,5 +135,13 @@ test("review signal acknowledgement and resolution are append-only and terminal"
   assert.deepEqual(listReviewSignalHistory(signal.signalId,db).map(x=>x.status),["OPEN","ACKNOWLEDGED","RESOLVED"]);
   assert.throws(()=>transitionReviewSignal(signal.signalId,"ACKNOWLEDGED",reviewer,db),/REVIEW_SIGNAL_RESOLVED_TERMINAL/);
   assert.ok(!listOpenReviewSignals(db).some((x:any)=>x.signalId===signal.signalId));
+  db.close();
+});
+
+
+test("impact causes must be confirmed by the source state ledger",()=>{
+  const {db}=fixture();
+  assert.throws(()=>analyzeImpact({causeKind:"SOURCE_REVOKED",source:{id:"source-a",version:1}},owner,db),/SOURCE_CAUSE_NOT_CONFIRMED/);
+  assert.throws(()=>analyzeImpact({causeKind:"SOURCE_CHANGED",source:{id:"source-a",version:1}},owner,db),/SOURCE_CAUSE_NOT_CONFIRMED/);
   db.close();
 });

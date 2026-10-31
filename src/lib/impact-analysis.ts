@@ -6,6 +6,7 @@ import { requireAuthorization } from "./authorization";
 import type { ActorContext } from "./actor";
 import type { AuditEvent } from "./domain";
 import type { RelationType } from "./knowledge-graph";
+import { getLatestSourceState } from "./source-ledger";
 
 export type ImpactCauseKind="SOURCE_REVOKED"|"SOURCE_CHANGED";
 export type ImpactTargetType="KNOWLEDGE_VERSION"|"RELATION";
@@ -108,6 +109,9 @@ export function analyzeImpact(input:unknown,actor:ActorContext,db:Database.Datab
   requireAuthorization(actor.role,"IMPACT_ANALYZE");
   const parsed=inputSchema.parse(input);
   if(!db.prepare("SELECT 1 FROM sources WHERE id=? AND version=?").get(parsed.source.id,parsed.source.version))throw new Error("SOURCE_VERSION_NOT_FOUND");
+  const sourceState=getLatestSourceState(parsed.source.id,parsed.source.version,db);
+  const expectedState=parsed.causeKind==="SOURCE_REVOKED"?"REVOKED":"SUPERSEDED";
+  if(sourceState?.status!==expectedState)throw new Error("SOURCE_CAUSE_NOT_CONFIRMED");
 
   const causeBase={
     causeKind:parsed.causeKind,
