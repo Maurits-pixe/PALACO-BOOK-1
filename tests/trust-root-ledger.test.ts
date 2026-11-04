@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {createHash,generateKeyPairSync,sign as cryptoSign} from "node:crypto";
+import {createHash,createPublicKey,generateKeyPairSync,sign as cryptoSign} from "node:crypto";
 import {test} from "node:test";
 import Database from "better-sqlite3";
 import {applyMigrations} from "../src/lib/sqlite";
@@ -40,7 +40,6 @@ function canonicalJson(value:unknown):string{
   return `{${Object.keys(o).sort().map(k=>`${JSON.stringify(k)}:${canonicalJson(o[k])}`).join(",")}}`;
 }
 function fp(publicKeyPem:string){
-  const {createPublicKey}=require("node:crypto") as typeof import("node:crypto");
   return createHash("sha256").update(createPublicKey(publicKeyPem).export({type:"spki",format:"der"})).digest("hex");
 }
 function setupClosure(){
