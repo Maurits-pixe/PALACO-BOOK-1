@@ -67,3 +67,25 @@ still requires identification and review. The generated lockfile must be
 reviewed and committed before the reproducible `npm ci` route is accepted.
 
 **Do not close the findings merely because an override was added.**
+
+## Resolution evidence — GitHub Actions run #450
+
+Run [#450](https://github.com/Maurits-pixe/PALACO-BOOK-1/actions/runs/44990118307)
+completed **SUCCESS** for head `1011ca0e048dbf6d8c0ab41feb38536e17c9d7cd`.
+The downloaded and inspected `npm-audit-summary` artifact (ID
+`14741875188`) reported `NO_FINDINGS`: all severity counts and total are
+zero, with `release_authorization: DENY`.
+
+The downloaded `npm-lockfile-candidate` artifact (ID `14741411725`)
+contained npm lockfile v3 with **127** package entries, including
+`postcss@8.5.33` and `next@15.5.29`. SHA-256 of the extracted
+`package-lock.json` was:
+`4b2c8c5bde333a2c7263d9014751f04f1fe4ea425d09c47fcb1163869a4646a1`.
+
+**Status change:** PostCSS HIGH and Next.js MODERATE are no longer reported
+in the #450 scan. This observation is time-scoped to that CI dependency tree
+and npm advisory database. Do not claim that all vulnerabilities are absent
+forever. The dependency lockfile is still a **review-only candidate**.
+A subsequent CI revision now exercises `npm ci` against the generated
+candidate, but a complete separately reviewed and committed lockfile
+remains a distinct future gate.
