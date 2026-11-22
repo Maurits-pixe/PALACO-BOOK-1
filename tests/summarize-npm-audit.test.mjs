@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeAudit, auditGateExitCode, extractAffectedPackages } from '../scripts/summarize-npm-audit.mjs';
+import { summarizeAudit, auditGateExitCode, extractAffectedPackages, makeAuditProvenance } from '../scripts/summarize-npm-audit.mjs';
 
 const counts = { info: 0, low: 0, moderate: 0, high: 0, critical: 0, total: 0 };
 function report(override = {}) {
@@ -62,4 +62,19 @@ test('invalid package metadata fails closed rather than copying arbitrary conten
     '../sensitive': { severity: 'high' },
   } }).detail_status, 'INVALID');
   assert.equal(extractAffectedPackages({}).detail_status, 'UNAVAILABLE');
+});
+
+test('binds audit evidence to precise commit and lockfile bytes', () => {
+  const commit = 'a'.repeat(40);
+  const a = makeAuditProvenance(commit, Buffer.from('first'));
+  const b = makeAuditProvenance(commit, Buffer.from('changed'));
+  assert.equal(a.git_commit_sha, commit);
+  assert.match(a.lockfile_sha256, /^[a-f0-9]{64}$/);
+  assert.notEqual(a.lockfile_sha256, b.lockfile_sha256);
+});
+
+test('rejects missing or malformed audit evidence provenance', () => {
+  assert.throws(() => makeAuditProvenance(undefined, Buffer.from('abc')));
+  assert.throws(() => makeAuditProvenance('not-a-git-sha', Buffer.from('abc')));
+  assert.throws(() => makeAuditProvenance('a'.repeat(40), null));
 });
