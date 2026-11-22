@@ -136,3 +136,19 @@ The artifact-upload step remains `if: always()` so failed scans can still
 leave forensic evidence; such artifacts are **not** an approval. Both the
 scanner and this verifier are executed within the same CI environment, so
 this is consistency verification, not a third-party attestation.
+
+## Deterministic dependency inventory (review-only)
+
+After `npm ci` and locked-source verification, CI generates a
+`npm-dependency-inventory.json` artifact, retained for seven days.
+The inventory is computed entirely from the committed npm lockfile,
+not from mutable registry queries. Its source SHA-256 and checkout Git
+commit permit comparison between builds. It lists package location,
+name, pinned version, direct/optional flags, and package names with
+multiple resolved versions.
+
+The inventory never grants release authority (`release_authorization:
+DENY`). A stable inventory is not a full software bill of materials,
+license audit, supplier attestation, or proof that packages are safe.
+Potential duplicate versions are visibility signals, not automatic
+vulnerability findings.
