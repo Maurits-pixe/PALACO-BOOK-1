@@ -44,6 +44,11 @@ jobs:
         run: npm install --package-lock=true
       - name: Verify installed dependency lock metadata
         run: node scripts/verify-lockfile.mjs
+      - name: Exercise npm ci against generated candidate
+        if: steps.lock.outputs.committed == 'false'
+        run: npm ci
+      - name: Check lockfile again after npm ci
+        run: node scripts/verify-lockfile.mjs
       - name: Record lockfile candidate digest
         if: steps.lock.outputs.committed == 'false'
         shell: bash
