@@ -2,6 +2,7 @@
 // Summarize npm audit results without publishing detailed advisory payloads.
 // Any npm advisory finding blocks CI; all results remain evidence, not release authorization.
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -73,16 +74,37 @@ export function auditGateExitCode(result) {
   return 0;
 }
 
+// Bind a sanitized npm audit report to the exact Git commit and lockfile.
+// Refuse missing/untrusted commit metadata rather than claiming provenance.
+export function makeAuditProvenance(commitSha, lockfileContent) {
+  if (typeof commitSha !== 'string' || !/^[a-f0-9]{40}$/.test(commitSha) ||
+      !(typeof lockfileContent === 'string' || Buffer.isBuffer(lockfileContent))) {
+    throw new Error('Invalid commit or lockfile for audit provenance');
+  }
+  return {
+    git_commit_sha: commitSha,
+    lockfile_sha256: createHash('sha256').update(lockfileContent).digest('hex'),
+  };
+}
+
 export function main() {
   const exitCode = process.argv[2];
   let result;
+  let provenance = null;
   let affected = { detail_status: 'UNAVAILABLE', packages: [] };
+  try {
+    provenance = makeAuditProvenance(process.env.GITHUB_SHA,
+      readFileSync(resolve('package-lock.json')));
+  } catch {
+    // Missing or corrupt source metadata must not yield clean audit evidence.
+    result = { status: 'ERROR', reason: 'Missing valid provenance', counts: null };
+  }
   try {
     const raw = JSON.parse(readFileSync(resolve('npm-audit.raw.json'), 'utf8'));
     result = summarizeAudit(raw, exitCode);
     affected = extractAffectedPackages(raw);
-    if (result.status === 'FINDINGS' && affected.detail_status === 'INVALID') {
-      result = { status: 'ERROR', reason: 'Invalid vulnerability package detail', counts: null };
+    if (!provenance || (result.status === 'FINDINGS' && affected.detail_status === 'INVALID')) {
+      result = { status: 'ERROR', reason: 'Invalid audit provenance or package detail', counts: null };
     }
   } catch {
     result = { status: 'ERROR', reason: 'Could not parse scanner output', counts: null };
@@ -94,6 +116,7 @@ export function main() {
     counts: result.counts,
     affected_packages: affected.packages,
     package_detail_status: affected.detail_status,
+    provenance,
     release_authorization: 'DENY',
   };
   writeFileSync(resolve('npm-audit-summary.json'), JSON.stringify(summary, null, 2) + '\n');
