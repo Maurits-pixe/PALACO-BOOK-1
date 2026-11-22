@@ -48,3 +48,16 @@ The repository does not yet contain a reviewed npm lockfile. A successful
 `npm install` is **not** evidence of a reproducible dependency graph.
 Before changing CI to `npm ci`, generate and review a complete lockfile,
 verify its registry/integrity metadata and run a fresh CI verification.
+
+## Lockfile structural verification (prepared, not yet mandatory)
+
+`scripts/verify-lockfile.mjs` validates an npm v3 lockfile against the
+`package.json` root declarations. For nested packages it rejects missing
+package integrity fields, links, and sources other than HTTPS
+`registry.npmjs.org`. The command runs offline and does **not** establish
+that the registry or packages are trustworthy.
+
+CI invokes this verifier **only when a package-lock.json exists**. There is
+currently no reviewed lockfile; a successful CI run does not mean the new
+check executed. Do not enable `npm ci` until a complete lockfile has been
+generated, independently reviewed and successfully installed in CI.
