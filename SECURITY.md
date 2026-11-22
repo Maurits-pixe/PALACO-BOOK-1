@@ -101,3 +101,18 @@ correctly fails CI. Every finding is a merge/release blocker requiring
 review, remediation and a repeat scan. A successful CI run still does not
 supersede independent human review or GO-13 HOLD.
 
+
+## Evidence-to-source binding
+
+The sanitized `npm-audit-summary.json` now also records the CI checkout
+commit identifier (`GITHUB_SHA`) and SHA-256 of the **exact tracked**
+`package-lock.json` bytes. Missing or malformed provenance causes the
+audit step to fail closed, even if npm reports no findings. These fields
+allow later investigators to compare the artifact to its specific source
+revision and lockfile, but do not themselves authenticate GitHub, npm,
+or the runtime environment.
+
+For `pull_request` events, `GITHUB_SHA` can represent the temporary
+GitHub-generated merge commit rather than the PR branch tip. Reviewers must
+use the workflow run metadata to distinguish these; never silently
+substitute a branch SHA when verifying audit provenance.
