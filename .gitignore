@@ -49,3 +49,7 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Generated audit evidence (CI artifact only)
+npm-audit.raw.json
+npm-audit-summary.json
