@@ -44,12 +44,21 @@ jobs:
         run: npm install --package-lock=true
       - name: Verify installed dependency lock metadata
         run: node scripts/verify-lockfile.mjs
+      - name: Record lockfile candidate digest
+        if: steps.lock.outputs.committed == 'false'
+        shell: bash
+        run: |
+          sha256sum package-lock.json > package-lock.sha256
+          echo "Lockfile candidate digest:"
+          cat package-lock.sha256
       - name: Upload uncommitted lockfile candidate for human review
         if: steps.lock.outputs.committed == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: npm-lockfile-candidate
-          path: package-lock.json
+          path: |
+            package-lock.json
+            package-lock.sha256
           if-no-files-found: error
           retention-days: 7
       - run: npm run typecheck
