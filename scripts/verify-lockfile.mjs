@@ -8,6 +8,20 @@ import { pathToFileURL } from 'node:url';
 const SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
 const REGISTRY = 'registry.npmjs.org';
 
+export function hasValidIntegrity(value) {
+  if (typeof value !== 'string') return false;
+  // npm Subresource Integrity tokens: enforce algorithm and decoded digest size.
+  const tokens = value.trim().split(/\s+/);
+  if (tokens.length === 0) return false;
+  return tokens.every((token) => {
+    const match = /^(sha384|sha512)-([A-Za-z0-9+/]+={0,2})$/.exec(token);
+    if (!match) return false;
+    const decoded = Buffer.from(match[2], 'base64');
+    const expected = match[1] === 'sha384' ? 48 : 64;
+    return decoded.length === expected && decoded.toString('base64') === match[2];
+  });
+}
+
 export function validateLockfile(manifest, lock) {
   const errors = [];
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest) ||
@@ -33,6 +47,15 @@ export function validateLockfile(manifest, lock) {
       }
     }
   }
+  // A matching root declaration alone is insufficient: all direct packages
+  // must also be represented in the dependency tree.
+  for (const section of SECTIONS) {
+    for (const dependency of Object.keys(manifest[section] ?? {})) {
+      if (!Object.hasOwn(lock.packages, `node_modules/${dependency}`)) {
+        errors.push(`Missing direct package: ${dependency}`);
+      }
+    }
+  }
   for (const [name, pkg] of Object.entries(lock.packages)) {
     if (name === '') continue;
     if (!name.startsWith('node_modules/') && !name.includes('/node_modules/')) {
@@ -46,7 +69,7 @@ export function validateLockfile(manifest, lock) {
     if (pkg.link === true || typeof pkg.version !== 'string' || !pkg.version) {
       errors.push(`Unpinned or linked package: ${name}`);
     }
-    if (!/^sha(?:384|512)-[A-Za-z0-9+/]+={0,2}$/.test(pkg.integrity ?? '')) {
+    if (!hasValidIntegrity(pkg.integrity)) {
       errors.push(`Missing approved integrity checksum: ${name}`);
     }
     try {
