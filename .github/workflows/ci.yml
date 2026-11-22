@@ -61,15 +61,21 @@ jobs:
             package-lock.sha256
           if-no-files-found: error
           retention-days: 7
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit and integration tests
+        run: npm test
+      - name: Build
+        run: npm run build
       - name: Collect npm vulnerability audit evidence
         shell: bash
         run: |
+          trap 'rm -f npm-audit.raw.json' EXIT
           set +e
           npm audit --json --audit-level=low > npm-audit.raw.json
           audit_exit=$?
           set -e
           node scripts/summarize-npm-audit.mjs "$audit_exit"
-          rm -f npm-audit.raw.json
       - name: Upload sanitized npm audit summary
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,6 +84,3 @@ jobs:
           path: npm-audit-summary.json
           if-no-files-found: warn
           retention-days: 7
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
