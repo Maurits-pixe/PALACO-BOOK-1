@@ -9,6 +9,11 @@ export function isSensitiveTrackedPath(path) {
   const name = basename(path.replaceAll('\\', '/')).toLowerCase();
   if (name === '.env.example' || name === '.env.sample') return false;
   if (name === '.env' || name.startsWith('.env.')) return true;
+  // Tooling configuration may carry registry and package-index tokens.
+  if (name === '.npmrc' || name === '.pypirc') return true;
+  // Common unencrypted SSH key names and cloud credential exports.
+  if (/^id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$/.test(name)) return true;
+  if (/^(?:credentials|service-account|service_account)(?:[-_][a-z0-9-]+)?\.json$/.test(name)) return true;
   if (/\.(?:pem|key|p12|pfx|sqlite|sqlite3|db)(?:-(?:wal|shm|journal))?$/i.test(name)) return true;
   return false;
 }
