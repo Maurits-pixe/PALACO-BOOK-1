@@ -75,8 +75,9 @@ dependency graph. `scripts/summarize-npm-audit.mjs` creates
 (`NO_FINDINGS`, `FINDINGS`, or `ERROR`) and `release_authorization: DENY`.
 The summary is retained as a GitHub Actions artifact for seven days.
 
-- `FINDINGS` with **high or critical** advisories now causes CI failure.
-  Lower-severity findings are reported for review but never authorize release.
+- Any `FINDINGS` (**info, low, moderate, high or critical**) causes CI
+  failure. This is a zero-reported-findings CI policy, not a guarantee that
+  the entire dependency ecosystem has zero undiscovered vulnerabilities.
 - `ERROR` causes CI failure: an incomplete or failed scan must never be
   presented as a clean result.
 - `NO_FINDINGS` means no findings reported by npm at scan time; it is not
@@ -95,8 +96,8 @@ marked `UNAVAILABLE` and cannot be treated as proof that no packages are
 affected.
 
 TypeScript checks, unit tests and build run **before** the blocking audit,
-so the engineering status remains visible even when known high/critical
-vulnerabilities correctly fail CI. Any high/critical vulnerability is still
-an unconditional merge/release blocker; manual remediation and repeat
-evidence are necessary.
+so engineering status remains visible even when any reported vulnerability
+correctly fails CI. Every finding is a merge/release blocker requiring
+review, remediation and a repeat scan. A successful CI run still does not
+supersede independent human review or GO-13 HOLD.
 
