@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check tracked sensitive files
+        run: node scripts/check-tracked-sensitive.mjs
       # No lockfile is present on main; retain npm install until a
       # reviewed lockfile enables reproducible npm ci.
       - run: npm install
