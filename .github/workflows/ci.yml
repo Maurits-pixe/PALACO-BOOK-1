@@ -24,51 +24,18 @@ jobs:
         run: node scripts/check-tracked-sensitive.mjs
       - name: Check declared dependency sources
         run: node scripts/check-dependency-sources.mjs
-      - name: Detect committed npm lockfile
-        id: lock
-        shell: bash
-        run: |
-          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
-            echo "committed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "committed=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Require committed npm lockfile
+        run: git ls-files --error-unmatch package-lock.json
       - name: Verify committed lockfile before installation
-        if: steps.lock.outputs.committed == 'true'
         run: node scripts/verify-lockfile.mjs
-      - name: Install reproducibly from committed lockfile
-        if: steps.lock.outputs.committed == 'true'
+      - name: Record committed lockfile digest
+        run: sha256sum package-lock.json > package-lock.sha256
+      - name: Install from committed lockfile
         run: npm ci
-      - name: Install and generate review-only lockfile candidate
-        if: steps.lock.outputs.committed == 'false'
-        run: npm install --package-lock=true
-      - name: Verify installed dependency lock metadata
+      - name: Verify dependency metadata after installation
         run: node scripts/verify-lockfile.mjs
-      - name: Record lockfile candidate digest
-        if: steps.lock.outputs.committed == 'false'
-        shell: bash
-        run: |
-          sha256sum package-lock.json > package-lock.sha256
-          echo "Lockfile candidate digest:"
-          cat package-lock.sha256
-      - name: Exercise npm ci against generated candidate
-        if: steps.lock.outputs.committed == 'false'
-        run: npm ci
-      - name: Check lockfile again after npm ci
-        run: node scripts/verify-lockfile.mjs
-      - name: Verify generated lockfile digest after npm ci
-        if: steps.lock.outputs.committed == 'false'
+      - name: Verify npm ci did not modify lockfile
         run: sha256sum -c package-lock.sha256
-      - name: Upload uncommitted lockfile candidate for human review
-        if: steps.lock.outputs.committed == 'false'
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-lockfile-candidate
-          path: |
-            package-lock.json
-            package-lock.sha256
-          if-no-files-found: error
-          retention-days: 7
       - name: Typecheck
         run: npm run typecheck
       - name: Unit and integration tests
