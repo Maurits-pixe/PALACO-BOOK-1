@@ -24,12 +24,34 @@ jobs:
         run: node scripts/check-tracked-sensitive.mjs
       - name: Check declared dependency sources
         run: node scripts/check-dependency-sources.mjs
-      - name: Validate lockfile metadata when present
-        if: ${{ hashFiles('package-lock.json') != '' }}
+      - name: Detect committed npm lockfile
+        id: lock
+        shell: bash
+        run: |
+          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Verify committed lockfile before installation
+        if: steps.lock.outputs.committed == 'true'
         run: node scripts/verify-lockfile.mjs
-      # No lockfile is present on main; retain npm install until a
-      # reviewed lockfile enables reproducible npm ci.
-      - run: npm install
+      - name: Install reproducibly from committed lockfile
+        if: steps.lock.outputs.committed == 'true'
+        run: npm ci
+      - name: Install and generate review-only lockfile candidate
+        if: steps.lock.outputs.committed == 'false'
+        run: npm install --package-lock=true
+      - name: Verify installed dependency lock metadata
+        run: node scripts/verify-lockfile.mjs
+      - name: Upload uncommitted lockfile candidate for human review
+        if: steps.lock.outputs.committed == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-lockfile-candidate
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
