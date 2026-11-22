@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeAudit, auditGateExitCode } from '../scripts/summarize-npm-audit.mjs';
+import { summarizeAudit, auditGateExitCode, extractAffectedPackages } from '../scripts/summarize-npm-audit.mjs';
 
 const counts = { info: 0, low: 0, moderate: 0, high: 0, critical: 0, total: 0 };
 function report(override = {}) {
@@ -39,4 +39,23 @@ test('blocks high and critical audit findings without treating moderate as clear
 
 test('scanner error fails closed with dedicated exit code', () => {
   assert.equal(auditGateExitCode(summarizeAudit({}, 1)), 2);
+});
+
+test('sanitizes affected package inventory without exposing raw advisory text', () => {
+  const input = { vulnerabilities: {
+    '@scope/sample': { severity: 'high', isDirect: true, fixAvailable: { name: 'sample', version: '2.0.0' }, via: [{ title: 'untrusted raw advisory' }] },
+    'alpha': { severity: 'moderate', isDirect: false, fixAvailable: false },
+  } };
+  const details = extractAffectedPackages(input);
+  assert.equal(details.detail_status, 'AVAILABLE');
+  assert.deepEqual(details.packages.map((p) => p.package), ['@scope/sample', 'alpha']);
+  assert.equal(details.packages[0].fix_available, 'YES');
+  assert.doesNotMatch(JSON.stringify(details), /untrusted raw advisory/);
+});
+
+test('invalid package metadata fails closed rather than copying arbitrary content', () => {
+  assert.equal(extractAffectedPackages({ vulnerabilities: {
+    '../sensitive': { severity: 'high' },
+  } }).detail_status, 'INVALID');
+  assert.equal(extractAffectedPackages({}).detail_status, 'UNAVAILABLE');
 });
