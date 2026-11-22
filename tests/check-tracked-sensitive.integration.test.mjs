@@ -60,11 +60,12 @@ test('git index gate rejects tracked SQLite sidecar files', () => {
 });
 
 test('git index gate fails closed outside a git working tree', () => {
-  temporaryRepository((dir) => {
-    const nongit = join(dir, 'outside');
-    mkdirSync(nongit);
+  const nongit = mkdtempSync(join(tmpdir(), 'palaco-book-nongit-'));
+  try {
     const run = spawnSync(process.execPath, [script], { cwd: nongit, encoding: 'utf8' });
     assert.equal(run.status, 2);
     assert.match(run.stderr, /could not enumerate the Git index/);
-  });
+  } finally {
+    rmSync(nongit, { recursive: true, force: true });
+  }
 });
