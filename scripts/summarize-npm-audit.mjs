@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Summarize npm audit results without publishing detailed advisory payloads.
-// This is evidence collection, not a release authorization gate.
+// High/Critical findings block CI; all results remain evidence, not release authorization.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -41,6 +41,13 @@ export function summarizeAudit(input, exitCode) {
   };
 }
 
+export function auditGateExitCode(result) {
+  if (result.status === 'ERROR') return 2;
+  if (result.status === 'FINDINGS' && result.counts &&
+      (result.counts.high > 0 || result.counts.critical > 0)) return 1;
+  return 0;
+}
+
 export function main() {
   const exitCode = process.argv[2];
   let result;
@@ -60,7 +67,7 @@ export function main() {
   writeFileSync(resolve('npm-audit-summary.json'), JSON.stringify(summary, null, 2) + '\n');
   console.log(`npm audit evidence status: ${result.status}; production authorization DENY`);
   if (result.counts) console.log(`Findings by severity: ${JSON.stringify(result.counts)}`);
-  return result.status === 'ERROR' ? 2 : 0;
+  return auditGateExitCode(result);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
