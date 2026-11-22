@@ -36,6 +36,15 @@ jobs:
         run: node scripts/verify-lockfile.mjs
       - name: Verify npm ci did not modify lockfile
         run: sha256sum -c package-lock.sha256
+      - name: Generate deterministic dependency review inventory
+        run: node scripts/build-dependency-inventory.mjs
+      - name: Upload dependency inventory for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-dependency-inventory
+          path: npm-dependency-inventory.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Typecheck
         run: npm run typecheck
       - name: Unit and integration tests
