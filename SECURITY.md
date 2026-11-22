@@ -44,31 +44,28 @@ requires a different syntax needs explicit policy review before use. This is a n
 manifest policy: it does not scan transitive dependencies or guarantee a
 malware-free supply chain.
 
-The repository does not yet contain a reviewed npm lockfile. A successful
-`npm install` is **not** evidence of a reproducible dependency graph.
-Before changing CI to `npm ci`, generate and review a complete lockfile,
-verify its registry/integrity metadata and run a fresh CI verification.
+The repository now contains a pinned npm v3 `package-lock.json`, derived
+from the verified CI #460 candidate. A successful CI #470 confirmed the
+**committed** lockfile path: offline metadata validation, `npm ci`,
+TypeScript checks, regression tests, build and npm audit.
 
-## Lockfile structural verification (prepared, not yet mandatory)
+## Required dependency lockfile gate
 
-`scripts/verify-lockfile.mjs` validates an npm v3 lockfile against the
-`package.json` root declarations. For nested packages it rejects missing
-package integrity fields, links, and sources other than HTTPS
-`registry.npmjs.org`. The command runs offline and does **not** establish
-that the registry or packages are trustworthy.
+`scripts/verify-lockfile.mjs` checks that root dependency declarations match,
+the expected direct dependencies exist, each nested package is pinned with
+approved integrity metadata and HTTPS `registry.npmjs.org` origins, and
+every version override is satisfied (including nested instances).
 
-CI first identifies whether `package-lock.json` is **tracked by Git**.
-When a committed lockfile exists, CI verifies it before dependency installation
-and uses `npm ci`. Otherwise CI performs `npm install`, verifies the generated
-lockfile's structure, and uploads the generated candidate as a seven-day
-GitHub Actions artifact named `npm-lockfile-candidate`. CI does **not** commit
-this artifact or approve it. Human review is mandatory before adding it to Git.
+CI **requires `package-lock.json` to be tracked by Git**. It validates
+the lockfile before installing, records SHA-256, installs via `npm ci`, then
+validates the metadata and checksum again. There is **no automatic fallback
+to `npm install`** and no generation of unreviewed lockfiles in CI.
 
-To promote a candidate: download it from the appropriate GitHub Actions run;
-review source URLs, integrity hashes and version changes; commit the complete
-candidate in a separate reviewed change; and verify the `npm ci` path. The
-candidate is generated in CI, so it can depend on the registry's state at
-generation time; a green candidate run is not a reproducibility guarantee.
+Any dependency update must change both the manifest and the lockfile in
+a reviewed feature-branch commit. Regenerate, inspect all new package
+origins, checksums and advisories, and obtain fresh CI evidence before
+considering the PR for human review. These checks establish technical
+consistency, not independent supplier trust or production authorization.
 
 ## npm advisory scan — evidence only
 
@@ -103,15 +100,3 @@ vulnerabilities correctly fail CI. Any high/critical vulnerability is still
 an unconditional merge/release blocker; manual remediation and repeat
 evidence are necessary.
 
-## Candidate npm ci exercise
-
-While there is no committed, reviewed lockfile, CI now generates a temporary
-candidate, records its SHA-256 **before** invoking `npm ci`, verifies the
-candidate with a second offline lockfile validation, and checks that the
-candidate's hash is unchanged by the installation. Tests, build, and npm audit
-run against this `npm ci`-installed dependency tree.
-
-This tests that the generated candidate supports `npm ci` in the CI
-environment; it is **not** equivalent to a committed, human-reviewed
-lockfile. The committed-lockfile gate, independent review, GO-13 HOLD and
-release DENY remain unchanged.
