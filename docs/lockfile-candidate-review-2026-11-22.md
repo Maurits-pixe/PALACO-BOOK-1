@@ -63,3 +63,36 @@ A matching digest proves that the bytes match the workflow-recorded hash,
 not that the dependencies are safe, signed, or vulnerability-free. For the
 older workflow #404 artifact, use the SHA-256 value in this report instead:
 its archive does not contain the new `package-lock.sha256` sidecar.
+
+## CI run #460 — successful npm ci rehearsal
+
+GitHub Actions [run #460](https://github.com/Maurits-pixe/PALACO-BOOK-1/actions/runs/44990455213)
+on commit `5990ce899baad55f92b6e7ac119386f1b6a86465`
+completed **SUCCESS**. The verified job steps included:
+
+- Generate npm lockfile candidate using `npm install`.
+- Record `package-lock.json` SHA-256 before the second installation.
+- Run `npm ci` with the generated candidate: **SUCCESS**.
+- Validate lockfile metadata and verify `sha256sum -c package-lock.sha256`
+  after `npm ci`: **SUCCESS**.
+- Typecheck, test, build and npm advisory audit: **SUCCESS**.
+
+The downloaded `npm-lockfile-candidate` artifact ID `14741137661`
+has archive digest
+`sha256:8da8500a8a41a599b9f1282365f340a72944f6a870aa1ac4bbfc99d4f1f3c61d`.
+The extracted **64,655-byte** `package-lock.json` SHA-256 is
+`4b2c8c5bde333a2c7263d9014751f04f1fe4ea425d09c47fcb1163869a4646a1`,
+matching its bundled `package-lock.sha256` sidecar.
+
+Static inspection counted **126** non-root package entries and no
+non-registry or non-HTTPS archive origins in the candidate. The
+`npm-audit-summary` artifact ID `14741114259` recorded `NO_FINDINGS`
+with total vulnerabilities **0**, and `release_authorization: DENY`.
+
+The **new lockfile override guard** added after run #460 verifies that
+every package matching a pinned `package.json.overrides` entry resolves
+to the exact required version, including nested instances. Its fresh CI
+result must be established separately; #460 cannot verify later changes.
+
+**Open:** human review and commit the exact candidate, then independently
+repeat the committed-lockfile `npm ci` route before considering PR readiness.
