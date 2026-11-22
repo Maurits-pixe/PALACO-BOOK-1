@@ -50,7 +50,7 @@ export function extractAffectedPackages(input) {
   if (entries.length > 200) return { detail_status: 'TRUNCATED', packages: [] };
   const packages = [];
   for (const [name, entry] of entries) {
-    if (!/^(?:@[a-z0-9][a-z0-9._-]*\\/)?[a-z0-9][a-z0-9._-]*$/i.test(name) ||
+    if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/i.test(name) ||
         name.length > 128 || !entry || typeof entry !== 'object' ||
         !LEVELS.includes(entry.severity)) {
       return { detail_status: 'INVALID', packages: [] };
