@@ -116,3 +116,23 @@ For `pull_request` events, `GITHUB_SHA` can represent the temporary
 GitHub-generated merge commit rather than the PR branch tip. Reviewers must
 use the workflow run metadata to distinguish these; never silently
 substitute a branch SHA when verifying audit provenance.
+
+## Independent audit evidence verification gate
+
+After npm's scanner succeeds, CI runs
+`node scripts/verify-audit-evidence.mjs` **before** uploading the
+sanitized artifact. This is a separate verifier that reads the finished
+report and `package-lock.json` directly from disk and obtains the actual
+checkout SHA via `git rev-parse HEAD`. It requires:
+
+- Known report schema, `release_authorization: DENY`, and `NO_FINDINGS`.
+- All severity counters and their total equal to zero.
+- No affected packages and complete package-detail metadata.
+- Exact match between the report's Git checkout SHA and Git HEAD.
+- Exact match between the report's lockfile SHA-256 and current lockfile bytes.
+
+Any missing, inconsistent or altered field fails the independent CI gate.
+The artifact-upload step remains `if: always()` so failed scans can still
+leave forensic evidence; such artifacts are **not** an approval. Both the
+scanner and this verifier are executed within the same CI environment, so
+this is consistency verification, not a third-party attestation.
