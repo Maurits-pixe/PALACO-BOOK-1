@@ -26,12 +26,16 @@ test('rejects inconsistent totals and exit status', () => {
   assert.equal(summarizeAudit(report(), 1).status, 'ERROR');
 });
 
-test('blocks high and critical audit findings without treating moderate as clear', () => {
+test('blocks every audit severity, including moderate and low', () => {
   const moderate = summarizeAudit(report({ moderate: 1, total: 1 }), 1);
+  const low = summarizeAudit(report({ low: 1, total: 1 }), 1);
+  const info = summarizeAudit(report({ info: 1, total: 1 }), 1);
   const high = summarizeAudit(report({ high: 1, total: 1 }), 1);
   const critical = summarizeAudit(report({ critical: 1, total: 1 }), 1);
   assert.equal(moderate.status, 'FINDINGS');
-  assert.equal(auditGateExitCode(moderate), 0);
+  assert.equal(auditGateExitCode(moderate), 1);
+  assert.equal(auditGateExitCode(low), 1);
+  assert.equal(auditGateExitCode(info), 1);
   assert.equal(auditGateExitCode(high), 1);
   assert.equal(auditGateExitCode(critical), 1);
   assert.equal(auditGateExitCode(summarizeAudit(report(), 0)), 0);
