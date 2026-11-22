@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Prevent accidental tracking of local credentials and persistent databases.
-// No third-party dependencies. This gate inspects the Git index, not the
-// working directory, and never prints file contents.
+// Inspect Git-tracked paths for local credentials and persistent databases.
+// Does not inspect file contents or access network resources.
 import { execFileSync } from 'node:child_process';
-import { basename } from 'node:path';
+import { basename, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export function isSensitiveTrackedPath(path) {
   const name = basename(path.replaceAll('\\', '/')).toLowerCase();
@@ -41,6 +41,8 @@ export function main() {
   return 0;
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+// Resolve to a canonical file URL so invocation works across POSIX/Windows,
+// with relative paths and paths containing spaces.
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   process.exitCode = main();
 }
