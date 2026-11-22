@@ -102,3 +102,16 @@ so the engineering status remains visible even when known high/critical
 vulnerabilities correctly fail CI. Any high/critical vulnerability is still
 an unconditional merge/release blocker; manual remediation and repeat
 evidence are necessary.
+
+## Candidate npm ci exercise
+
+While there is no committed, reviewed lockfile, CI now generates a temporary
+candidate, records its SHA-256 **before** invoking `npm ci`, verifies the
+candidate with a second offline lockfile validation, and checks that the
+candidate's hash is unchanged by the installation. Tests, build, and npm audit
+run against this `npm ci`-installed dependency tree.
+
+This tests that the generated candidate supports `npm ci` in the CI
+environment; it is **not** equivalent to a committed, human-reviewed
+lockfile. The committed-lockfile gate, independent review, GO-13 HOLD and
+release DENY remain unchanged.
