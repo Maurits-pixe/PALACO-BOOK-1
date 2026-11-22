@@ -24,6 +24,9 @@ jobs:
         run: node scripts/check-tracked-sensitive.mjs
       - name: Check declared dependency sources
         run: node scripts/check-dependency-sources.mjs
+      - name: Validate lockfile metadata when present
+        if: ${{ hashFiles('package-lock.json') != '' }}
+        run: node scripts/verify-lockfile.mjs
       # No lockfile is present on main; retain npm install until a
       # reviewed lockfile enables reproducible npm ci.
       - run: npm install
