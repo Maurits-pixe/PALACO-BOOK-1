@@ -152,3 +152,17 @@ DENY`). A stable inventory is not a full software bill of materials,
 license audit, supplier attestation, or proof that packages are safe.
 Potential duplicate versions are visibility signals, not automatic
 vulnerability findings.
+
+## Cross-artifact inventory and audit consistency
+
+CI now runs `scripts/verify-dependency-inventory.mjs` after the independent
+npm audit verification and **before** publishing the inventory artifact.
+It reconstructs the inventory from the committed lockfile and actual Git
+checkout and requires an exact match with the generated inventory. It also
+checks audit evidence against the same checkout SHA and lockfile SHA-256.
+Any altered package, reordered or missing entry, discrepant summary count,
+or mismatched audit source fails closed.
+
+This verifies two reports refer to the same local build inputs. It does not
+prove that upstream packages are benign, that all vulnerabilities have been
+discovered, or that the software may be released.
