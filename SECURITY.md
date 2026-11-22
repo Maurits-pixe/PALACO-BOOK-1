@@ -166,3 +166,18 @@ or mismatched audit source fails closed.
 This verifies two reports refer to the same local build inputs. It does not
 prove that upstream packages are benign, that all vulnerabilities have been
 discovered, or that the software may be released.
+
+## Registry tarball identity binding
+
+The offline lockfile validator now requires each npm tarball URL to name
+**exactly the same package and pinned version** as its lockfile installation
+entry. For example, `node_modules/@scope/example` version `1.2.3` must
+resolve to
+`https://registry.npmjs.org/@scope/example/-/example-1.2.3.tgz`.
+This includes matching the raw URL byte-for-byte against its canonical form,
+rejecting query strings, fragments, percent-encoded aliases and path
+normalization tricks. The check applies to nested dependencies too.
+
+Only approved registry origins are allowed; checksums still protect package
+content against accidental changes. This is URL identity consistency,
+**not** independent registry trust or a guarantee of artifact safety.
