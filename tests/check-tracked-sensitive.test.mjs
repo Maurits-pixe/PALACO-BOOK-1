@@ -23,3 +23,18 @@ test('allows documented templates, code and ordinary files', () => {
 test('produces stable, sorted violations', () => {
   assert.deepEqual(findSensitivePaths(['safe.txt', 'z.db', 'a/.env', 'a/.env.example']), ['a/.env', 'z.db']);
 });
+
+test('rejects package registry token configurations and common SSH key names', () => {
+  for (const p of ['.npmrc', 'config/.pypirc', 'home/id_rsa', 'ssh/id_ed25519', 'ssh/id_ed25519.pub']) {
+    assert.equal(isSensitiveTrackedPath(p), true, p);
+  }
+});
+
+test('rejects cloud credential JSON filenames but accepts normal JSON', () => {
+  for (const p of ['credentials.json', 'secrets/service-account.json', 'config/service_account-prod.json']) {
+    assert.equal(isSensitiveTrackedPath(p), true, p);
+  }
+  for (const p of ['package.json', 'tsconfig.json', 'fixtures/example.json']) {
+    assert.equal(isSensitiveTrackedPath(p), false, p);
+  }
+});
