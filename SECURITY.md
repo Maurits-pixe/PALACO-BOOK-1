@@ -74,7 +74,7 @@ generation time; a green candidate run is not a reproducibility guarantee.
 
 CI executes `npm audit --json --audit-level=low` against the installed
 dependency graph. `scripts/summarize-npm-audit.mjs` creates
-`npm-audit-summary.json` containing **only** severity counts, a status
+`npm-audit-summary.json` containing severity counts, a constrained list of affected npm package names (when the scanner supplies valid details), a status
 (`NO_FINDINGS`, `FINDINGS`, or `ERROR`) and `release_authorization: DENY`.
 The summary is retained as a GitHub Actions artifact for seven days.
 
@@ -87,3 +87,18 @@ The summary is retained as a GitHub Actions artifact for seven days.
 - Raw advisory output is deliberately not published as an artifact.
   CI only uploads the sanitized summary; access to GitHub job logs/artifacts
   remains subject to repository policy.
+
+## Vulnerability triage evidence
+
+Audit summaries include `affected_packages` with package identifier, severity,
+direct dependency marker and whether npm reports a fix is available. Detailed
+advisory text, arbitrary URLs, fix command output and proof-of-concept content
+are not copied into the artifact. Missing package details are explicitly
+marked `UNAVAILABLE` and cannot be treated as proof that no packages are
+affected.
+
+TypeScript checks, unit tests and build run **before** the blocking audit,
+so the engineering status remains visible even when known high/critical
+vulnerabilities correctly fail CI. Any high/critical vulnerability is still
+an unconditional merge/release blocker; manual remediation and repeat
+evidence are necessary.
