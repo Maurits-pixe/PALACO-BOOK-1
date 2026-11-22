@@ -57,7 +57,15 @@ package integrity fields, links, and sources other than HTTPS
 `registry.npmjs.org`. The command runs offline and does **not** establish
 that the registry or packages are trustworthy.
 
-CI invokes this verifier **only when a package-lock.json exists**. There is
-currently no reviewed lockfile; a successful CI run does not mean the new
-check executed. Do not enable `npm ci` until a complete lockfile has been
-generated, independently reviewed and successfully installed in CI.
+CI first identifies whether `package-lock.json` is **tracked by Git**.
+When a committed lockfile exists, CI verifies it before dependency installation
+and uses `npm ci`. Otherwise CI performs `npm install`, verifies the generated
+lockfile's structure, and uploads the generated candidate as a seven-day
+GitHub Actions artifact named `npm-lockfile-candidate`. CI does **not** commit
+this artifact or approve it. Human review is mandatory before adding it to Git.
+
+To promote a candidate: download it from the appropriate GitHub Actions run;
+review source URLs, integrity hashes and version changes; commit the complete
+candidate in a separate reviewed change; and verify the `npm ci` path. The
+candidate is generated in CI, so it can depend on the registry's state at
+generation time; a green candidate run is not a reproducibility guarantee.
