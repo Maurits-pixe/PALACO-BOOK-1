@@ -31,3 +31,35 @@ Status: **EVIDENCE ONLY / HOLD**. This report is not release authorization.
 4. Require fresh CI results for the final commit. Do not confuse workflow success for this candidate with approval for production.
 
 **No lockfile is committed by this report. Main branch and production remain unchanged.**
+
+## Recorded top-level resolutions
+
+The downloaded candidate resolves these direct packages (examples; full file
+review is still required):
+
+| Package | Resolved version |
+| --- | --- |
+| next | 15.5.29 |
+| react | 19.3.1 |
+| react-dom | 19.3.1 |
+| zod | 4.6.7 |
+| better-sqlite3 | 12.11.1 |
+| typescript | 5.9.3 |
+| tsx | 4.23.15 |
+
+Downloaded ZIP inspection independently confirmed the exact `package-lock.json`
+SHA-256 recorded above. Version inventory is not a vulnerability assessment.
+
+## Future artifact digest procedure
+
+From the updated CI workflow, each newly generated candidate artifact contains
+`package-lock.json` and `package-lock.sha256`. After downloading, verify with:
+
+```sh
+sha256sum -c package-lock.sha256
+```
+
+A matching digest proves that the bytes match the workflow-recorded hash,
+not that the dependencies are safe, signed, or vulnerability-free. For the
+older workflow #404 artifact, use the SHA-256 value in this report instead:
+its archive does not contain the new `package-lock.sha256` sidecar.
