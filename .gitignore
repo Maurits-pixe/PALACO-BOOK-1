@@ -14,6 +14,23 @@ coverage/
 *.pem
 *.key
 
+# Registry credentials, SSH identity keys, and cloud credential exports
+.npmrc
+.pypirc
+id_rsa
+id_rsa.pub
+id_dsa
+id_dsa.pub
+id_ecdsa
+id_ecdsa.pub
+id_ed25519
+id_ed25519.pub
+credentials.json
+service-account*.json
+service_account*.json
+*.p12
+*.pfx
+
 # Local SQLite data (never commit personal records)
 *.sqlite
 *.sqlite3
