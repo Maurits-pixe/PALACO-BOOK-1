@@ -72,10 +72,18 @@ export function validateLockfile(manifest, lock) {
     if (!hasValidIntegrity(pkg.integrity)) {
       errors.push(`Missing approved integrity checksum: ${name}`);
     }
+    // Every registry tarball URL must identify the same package and version
+    // as its lockfile installation location. Reject arbitrary registry paths,
+    // redirects, query strings and percent-encoded path variants.
+    const packageName = name.slice(name.lastIndexOf('node_modules/') + 'node_modules/'.length);
+    const basename = packageName.split('/').at(-1);
+    const expectedPath = `/${packageName}/-/${basename}-${pkg.version}.tgz`;
     try {
       const url = new URL(pkg.resolved);
       if (url.protocol !== 'https:' || url.hostname !== REGISTRY ||
-          url.username || url.password || url.port || url.hash) {
+          url.username || url.password || url.port || url.hash || url.search ||
+          url.pathname !== expectedPath ||
+          url.href !== `https://${REGISTRY}${expectedPath}`) {
         errors.push(`Unapproved package origin: ${name}`);
       }
     } catch {
