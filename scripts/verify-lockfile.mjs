@@ -82,6 +82,22 @@ export function validateLockfile(manifest, lock) {
       errors.push(`Invalid package URL: ${name}`);
     }
   }
+  // Confirm exact npm overrides were actually applied to every matching
+  // package entry, including nested node_modules installations.
+  const overrides = manifest.overrides ?? {};
+  for (const [packageName, pinnedVersion] of Object.entries(overrides)) {
+    const matching = Object.entries(lock.packages).filter(([path]) =>
+      path !== '' && (path === `node_modules/${packageName}` ||
+        path.endsWith(`/node_modules/${packageName}`)));
+    if (matching.length === 0) {
+      errors.push(`Unresolved override package: ${packageName}`);
+    }
+    for (const [path, entry] of matching) {
+      if (entry?.version !== pinnedVersion) {
+        errors.push(`Override version mismatch at ${path}`);
+      }
+    }
+  }
   return errors.sort();
 }
 
