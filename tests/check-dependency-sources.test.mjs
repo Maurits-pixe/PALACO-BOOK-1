@@ -26,3 +26,17 @@ test('rejects malformed dependency sections and empty specs', () => {
   assert.equal(validateDependencySources({ devDependencies: { typescript: '' } }).length, 1);
   assert.equal(validateDependencySources(null).length, 1);
 });
+
+test('accepts explicit comparators, prereleases and OR ranges', () => {
+  const allowed = ['1.2.3', '^15.5.0', '~1.2.3', '>=1.2.3 <2.0.0', '^1.2.3 || ^2.0.0', '1.2.3-beta.1+build.3'];
+  for (const spec of allowed) {
+    assert.deepEqual(validateDependencySources({ dependencies: { pkg: spec } }), [], spec);
+  }
+});
+
+test('rejects mutable tags, SSH URLs, local paths and wildcard versions', () => {
+  const denied = ['latest', 'next', '*', '1.x', '../other', '/tmp/pkg', 'ssh://git@example.org/repo', 'git@example.org:team/repo', 'ftp://example.org/pkg', '1.2.3 ||'];
+  for (const spec of denied) {
+    assert.equal(validateDependencySources({ dependencies: { pkg: spec } }).length, 1, spec);
+  }
+});
