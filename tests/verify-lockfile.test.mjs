@@ -83,3 +83,32 @@ test('rejects absent and mismatched pinned override packages, including nested c
   const errors = validateLockfile(overrideManifest, lock);
   assert.ok(errors.some((error) => error.includes('Override version mismatch')));
 });
+
+test('rejects registry URLs that point to another package or mismatched version', () => {
+  for (const path of [
+    '/other/-/other-1.2.3.tgz',
+    '/alpha/-/alpha-9.9.9.tgz',
+    '/alpha/-/alpha-1.2.3.tgz?download=1',
+    '/alpha/-/alpha-1.2.3.tgz#suffix',
+    '/alpha/-/alpha-1.2.3.tgz/../alpha-1.2.3.tgz',
+  ]) {
+    const lock = validLock();
+    lock.packages['node_modules/alpha'].resolved = 'https://registry.npmjs.org' + path;
+    assert.ok(validateLockfile(manifest, lock).some((error) =>
+      error.includes('Unapproved package origin')), path);
+  }
+});
+
+test('accepts correctly scoped npm package tarball URLs and rejects mismatches', () => {
+  const lock = validLock();
+  lock.packages['node_modules/@scope/needle'] = {
+    version: '2.3.4',
+    resolved: 'https://registry.npmjs.org/@scope/needle/-/needle-2.3.4.tgz',
+    integrity: `sha512-${Buffer.alloc(64).toString('base64')}`,
+  };
+  assert.deepEqual(validateLockfile(manifest, lock), []);
+  lock.packages['node_modules/@scope/needle'].resolved =
+    'https://registry.npmjs.org/@scope/needle/-/wrong-2.3.4.tgz';
+  assert.ok(validateLockfile(manifest, lock).some((error) =>
+    error.includes('Unapproved package origin')));
+});
