@@ -33,8 +33,9 @@ test('produces ordered inventory and identifies divergent transitive versions', 
 
 test('inventory hash binds to exact source bytes without changing package counts', () => {
   const a = buildDependencyInventory(root, fixture(), sha);
-  const b = buildDependencyInventory(root, Buffer.from(fixture().toString().replace('  ', ' ')), sha);
-  assert.equal(a.lockfile_sha256, b.lockfile_sha256);
+  const b = buildDependencyInventory(root, Buffer.concat([fixture(), Buffer.from('\n')]), sha);
+  assert.notEqual(a.lockfile_sha256, b.lockfile_sha256);
+  assert.equal(a.package_locations, b.package_locations);
   assert.match(a.lockfile_sha256, /^[a-f0-9]{64}$/);
   assert.notEqual(a.git_checkout_sha, 'b'.repeat(40));
 });
