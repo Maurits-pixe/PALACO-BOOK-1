@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Summarize npm audit results without publishing detailed advisory payloads.
-// High/Critical findings block CI; all results remain evidence, not release authorization.
+// Any npm advisory finding blocks CI; all results remain evidence, not release authorization.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -69,8 +69,7 @@ export function extractAffectedPackages(input) {
 
 export function auditGateExitCode(result) {
   if (result.status === 'ERROR') return 2;
-  if (result.status === 'FINDINGS' && result.counts &&
-      (result.counts.high > 0 || result.counts.critical > 0)) return 1;
+  if (result.status === 'FINDINGS') return 1;
   return 0;
 }
 
