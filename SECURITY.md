@@ -69,3 +69,21 @@ review source URLs, integrity hashes and version changes; commit the complete
 candidate in a separate reviewed change; and verify the `npm ci` path. The
 candidate is generated in CI, so it can depend on the registry's state at
 generation time; a green candidate run is not a reproducibility guarantee.
+
+## npm advisory scan — evidence only
+
+CI executes `npm audit --json --audit-level=low` against the installed
+dependency graph. `scripts/summarize-npm-audit.mjs` creates
+`npm-audit-summary.json` containing **only** severity counts, a status
+(`NO_FINDINGS`, `FINDINGS`, or `ERROR`) and `release_authorization: DENY`.
+The summary is retained as a GitHub Actions artifact for seven days.
+
+- `FINDINGS` does not automatically break this development-only build,
+  but it **does not authorize release**; advisories require review and fixes.
+- `ERROR` causes CI failure: an incomplete or failed scan must never be
+  presented as a clean result.
+- `NO_FINDINGS` means no findings reported by npm at scan time; it is not
+  a guarantee of dependency safety or an authorization to deploy.
+- Raw advisory output is deliberately not published as an artifact.
+  CI only uploads the sanitized summary; access to GitHub job logs/artifacts
+  remains subject to repository policy.
