@@ -32,3 +32,17 @@ credentials, merge protected branches, or deploy to production.
 
 Report suspected security flaws privately to the repository maintainers.
 Do not put exploit details, live tokens or personal data in public issues.
+
+## Dependency source gate
+
+The pre-install `check-dependency-sources.mjs` gate rejects direct
+`package.json` dependencies declared using remote URLs, Git sources,
+local file/link/workspace sources, or package aliases. It checks production,
+development, optional and peer dependency sections. This is a narrow
+manifest policy: it does not scan transitive dependencies or guarantee a
+malware-free supply chain.
+
+The repository does not yet contain a reviewed npm lockfile. A successful
+`npm install` is **not** evidence of a reproducible dependency graph.
+Before changing CI to `npm ci`, generate and review a complete lockfile,
+verify its registry/integrity metadata and run a fresh CI verification.
