@@ -78,8 +78,8 @@ dependency graph. `scripts/summarize-npm-audit.mjs` creates
 (`NO_FINDINGS`, `FINDINGS`, or `ERROR`) and `release_authorization: DENY`.
 The summary is retained as a GitHub Actions artifact for seven days.
 
-- `FINDINGS` does not automatically break this development-only build,
-  but it **does not authorize release**; advisories require review and fixes.
+- `FINDINGS` with **high or critical** advisories now causes CI failure.
+  Lower-severity findings are reported for review but never authorize release.
 - `ERROR` causes CI failure: an incomplete or failed scan must never be
   presented as a clean result.
 - `NO_FINDINGS` means no findings reported by npm at scan time; it is not
