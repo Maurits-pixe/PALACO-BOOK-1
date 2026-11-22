@@ -1,12 +1,21 @@
 #!/usr/bin/env node
-// Check manifest dependency sources before npm installs anything.
-// This guard does not assert that package resolution is reproducible.
+// Allow only explicit registry semver specifications in direct dependencies.
+// This is not a transitive dependency or lockfile integrity audit.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
-const FORBIDDEN = /^(?:https?:|git(?:\+[^:]+)?:|git@|github:|gitlab:|bitbucket:|file:|link:|workspace:|npm:)/i;
+const VERSION = String.raw`(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?`;
+const COMPARATOR = new RegExp(`^(?:\\^|~|>=|<=|>|<|=)?${VERSION}$`);
+
+export function isRegistryVersionSpec(spec) {
+  if (typeof spec !== 'string' || !spec.trim()) return false;
+  return spec.trim().split(/\s*\|\|\s*/).every((range) => {
+    const parts = range.trim().split(/\s+/);
+    return parts.length > 0 && parts.every((part) => COMPARATOR.test(part));
+  });
+}
 
 export function validateDependencySources(manifest) {
   const errors = [];
@@ -21,10 +30,8 @@ export function validateDependencySources(manifest) {
       continue;
     }
     for (const [name, spec] of Object.entries(deps)) {
-      if (typeof spec !== 'string' || !spec.trim()) {
-        errors.push(`${section}.${name}: missing or invalid version specifier`);
-      } else if (FORBIDDEN.test(spec.trim())) {
-        errors.push(`${section}.${name}: disallowed dependency source`);
+      if (!isRegistryVersionSpec(spec)) {
+        errors.push(`${section}.${name}: expected explicit registry semver version/range`);
       }
     }
   }
@@ -45,7 +52,7 @@ export function main() {
     for (const error of errors) console.error(` - ${error}`);
     return 1;
   }
-  console.log('Dependency source check PASS (direct manifest sources only)');
+  console.log('Dependency source check PASS (direct registry semver sources only)');
   return 0;
 }
 
