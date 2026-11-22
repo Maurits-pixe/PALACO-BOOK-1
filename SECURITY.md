@@ -35,10 +35,12 @@ Do not put exploit details, live tokens or personal data in public issues.
 
 ## Dependency source gate
 
-The pre-install `check-dependency-sources.mjs` gate rejects direct
-`package.json` dependencies declared using remote URLs, Git sources,
-local file/link/workspace sources, or package aliases. It checks production,
-development, optional and peer dependency sections. This is a narrow
+The pre-install `check-dependency-sources.mjs` gate accepts only explicit
+three-component semver versions and supported comparator/range expressions in
+direct `package.json` declarations. It rejects URL/Git/local/alias sources,
+mutable dist-tags (such as `latest`), and wildcard ranges. It checks production,
+development, optional and peer dependency sections. A future dependency that
+requires a different syntax needs explicit policy review before use. This is a narrow
 manifest policy: it does not scan transitive dependencies or guarantee a
 malware-free supply chain.
 
