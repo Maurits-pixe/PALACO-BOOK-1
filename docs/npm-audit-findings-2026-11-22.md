@@ -45,3 +45,25 @@ making dependency upgrades.
 
 **No dependency patch, merge, release, or production deployment is claimed
 by this evidence record.**
+
+## Remediation candidate — transitive PostCSS
+
+GitHub Actions run [#440](https://github.com/Maurits-pixe/PALACO-BOOK-1/actions/runs/44989690680)
+reported two affected packages in the sanitized summary:
+
+- `postcss`: **high**, indirect dependency; npm fix availability **YES**.
+- `next`: **moderate**, direct dependency; npm fix availability **YES**.
+
+The downloaded run #440 lockfile resolved `postcss@8.4.31` and
+`next@15.5.29`. This branch now proposes a tightly scoped npm override
+`postcss: 8.5.33` in `package.json` while retaining the existing Next.js
+major release line. The PostCSS version is a *candidate*, not yet verified
+by a successful new npm audit and build.
+
+Acceptance criteria: CI must regenerate the candidate lockfile, confirm all
+PostCSS instances are patched, pass the full tests/build, and yield zero
+unresolved HIGH/CRITICAL findings. The separate Next.js MODERATE advisory
+still requires identification and review. The generated lockfile must be
+reviewed and committed before the reproducible `npm ci` route is accepted.
+
+**Do not close the findings merely because an override was added.**
