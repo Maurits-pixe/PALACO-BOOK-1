@@ -83,7 +83,8 @@ export function validateLockfile(manifest, lock) {
       if (url.protocol !== 'https:' || url.hostname !== REGISTRY ||
           url.username || url.password || url.port || url.hash || url.search ||
           url.pathname !== expectedPath ||
-          url.href !== `https://${REGISTRY}${expectedPath}`) {
+          url.href !== `https://${REGISTRY}${expectedPath}` ||
+          pkg.resolved !== `https://${REGISTRY}${expectedPath}`) {
         errors.push(`Unapproved package origin: ${name}`);
       }
     } catch {
