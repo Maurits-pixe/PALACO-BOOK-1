@@ -22,6 +22,8 @@ jobs:
           node-version: 22
       - name: Check tracked sensitive files
         run: node scripts/check-tracked-sensitive.mjs
+      - name: Check declared dependency sources
+        run: node scripts/check-dependency-sources.mjs
       # No lockfile is present on main; retain npm install until a
       # reviewed lockfile enables reproducible npm ci.
       - run: npm install
