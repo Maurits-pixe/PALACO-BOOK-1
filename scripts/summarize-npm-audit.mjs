@@ -41,6 +41,32 @@ export function summarizeAudit(input, exitCode) {
   };
 }
 
+// Export only constrained package identifiers and remediation availability.
+// Do not copy advisory descriptions, URLs, proof-of-concept text or raw payloads.
+export function extractAffectedPackages(input) {
+  if (!input || !input.vulnerabilities || typeof input.vulnerabilities !== 'object' ||
+      Array.isArray(input.vulnerabilities)) return { detail_status: 'UNAVAILABLE', packages: [] };
+  const entries = Object.entries(input.vulnerabilities);
+  if (entries.length > 200) return { detail_status: 'TRUNCATED', packages: [] };
+  const packages = [];
+  for (const [name, entry] of entries) {
+    if (!/^(?:@[a-z0-9][a-z0-9._-]*\\/)?[a-z0-9][a-z0-9._-]*$/i.test(name) ||
+        name.length > 128 || !entry || typeof entry !== 'object' ||
+        !LEVELS.includes(entry.severity)) {
+      return { detail_status: 'INVALID', packages: [] };
+    }
+    packages.push({
+      package: name,
+      severity: entry.severity,
+      direct: entry.isDirect === true,
+      fix_available: entry.fixAvailable === false ? 'NO' :
+        entry.fixAvailable === true || (entry.fixAvailable && typeof entry.fixAvailable === 'object') ? 'YES' : 'UNKNOWN',
+    });
+  }
+  packages.sort((a, b) => a.package.localeCompare(b.package));
+  return { detail_status: 'AVAILABLE', packages };
+}
+
 export function auditGateExitCode(result) {
   if (result.status === 'ERROR') return 2;
   if (result.status === 'FINDINGS' && result.counts &&
@@ -51,9 +77,14 @@ export function auditGateExitCode(result) {
 export function main() {
   const exitCode = process.argv[2];
   let result;
+  let affected = { detail_status: 'UNAVAILABLE', packages: [] };
   try {
     const raw = JSON.parse(readFileSync(resolve('npm-audit.raw.json'), 'utf8'));
     result = summarizeAudit(raw, exitCode);
+    affected = extractAffectedPackages(raw);
+    if (result.status === 'FINDINGS' && affected.detail_status === 'INVALID') {
+      result = { status: 'ERROR', reason: 'Invalid vulnerability package detail', counts: null };
+    }
   } catch {
     result = { status: 'ERROR', reason: 'Could not parse scanner output', counts: null };
   }
@@ -62,6 +93,8 @@ export function main() {
     status: result.status,
     reason: result.reason,
     counts: result.counts,
+    affected_packages: affected.packages,
+    package_detail_status: affected.detail_status,
     release_authorization: 'DENY',
   };
   writeFileSync(resolve('npm-audit-summary.json'), JSON.stringify(summary, null, 2) + '\n');
