@@ -25,5 +25,8 @@
     "typescript": "^5.9.0",
     "@types/better-sqlite3": "^7.6.13",
     "tsx": "^4.20.0"
+  },
+  "overrides": {
+    "postcss": "8.5.33"
   }
 }
