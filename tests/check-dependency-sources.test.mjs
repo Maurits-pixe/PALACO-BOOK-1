@@ -40,3 +40,18 @@ test('rejects mutable tags, SSH URLs, local paths and wildcard versions', () => 
     assert.equal(validateDependencySources({ dependencies: { pkg: spec } }).length, 1, spec);
   }
 });
+
+test('accepts a pinned registry-only transitive override', () => {
+  assert.deepEqual(validateDependencySources({
+    dependencies: { next: '^15.5.0' },
+    overrides: { postcss: '8.5.33' },
+  }), []);
+});
+
+test('rejects remote, mutable and nested dependency overrides', () => {
+  for (const spec of ['latest', '^8.5.33', 'git+https://example.org/repo', 'file:../postcss']) {
+    assert.equal(validateDependencySources({ overrides: { postcss: spec } }).length, 1, spec);
+  }
+  assert.equal(validateDependencySources({ overrides: { postcss: { version: '8.5.33' } } }).length, 1);
+  assert.equal(validateDependencySources({ overrides: [] }).length, 1);
+});
