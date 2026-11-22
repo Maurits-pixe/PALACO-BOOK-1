@@ -96,3 +96,24 @@ result must be established separately; #460 cannot verify later changes.
 
 **Open:** human review and commit the exact candidate, then independently
 repeat the committed-lockfile `npm ci` route before considering PR readiness.
+
+## Committed lockfile — branch verification gate
+
+The exact reviewed candidate from CI #460 was committed to the feature branch
+as `package-lock.json` in commit
+`20c9f278318d7da71070c6c72b579df2a2937098`.
+The Git blob SHA is
+`b8abd2125abc6bd312a0338d39c7b2bfb20a8498`,
+identical to the local `git hash-object` of the downloaded artifact.
+
+The `package-lock.json` SHA-256 remains:
+`4b2c8c5bde333a2c7263d9014751f04f1fe4ea425d09c47fcb1163869a4646a1`.
+
+This records an exact artifact-to-repository handoff. It does **not** signify
+an independently completed security audit or production approval.
+
+**Acceptance pending:** GitHub Actions must execute the **committed** lockfile
+branch (`Verify committed lockfile before installation` then
+`Install reproducibly from committed lockfile`), pass typecheck/tests/build,
+and report the current npm-audit results. GO-13 HOLD and authorization DENY
+remain in force regardless of CI outcome.
