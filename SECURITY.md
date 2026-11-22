@@ -181,3 +181,22 @@ normalization tricks. The check applies to nested dependencies too.
 Only approved registry origins are allowed; checksums still protect package
 content against accidental changes. This is URL identity consistency,
 **not** independent registry trust or a guarantee of artifact safety.
+
+## GitHub Actions supply-chain hardening
+
+The CI workflow pins external actions to **full 40-character Git commit
+identifiers**, rather than mutable major-version tags, and checks out source
+with `persist-credentials: false`. The global token permissions remain
+limited to `contents: read`.
+
+The pre-install `scripts/check-ci-action-pins.mjs` gate rejects mutable or
+dynamic external Action references and fails if checkout token persistence
+or read-only permissions are no longer explicitly configured. Regression
+tests exercise the policy with valid and malicious workflow snippets.
+
+The pinned actions currently originate from reviewed release identifiers:
+`actions/checkout` v4.2.2, `actions/setup-node` v4.4.0 and
+`actions/upload-artifact` v4.6.2. Pinning prevents reference movement;
+it does **not** guarantee those action implementations or their upstream
+dependencies are free of vulnerabilities. Future updates require review
+of the exact action commit, a deliberate pinned SHA change and new CI evidence.
