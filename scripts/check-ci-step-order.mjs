@@ -43,7 +43,8 @@ export function checkCiStepOrder(workflow) {
   if (unnamedCommands.length !== 0) {
     errors.push('Unnamed run steps are prohibited');
   }
-  const jobs = [...workflow.matchAll(/^  [a-z][a-z0-9_-]*:\s*$/gm)];
+  const jobsBlock = workflow.split(/^jobs:\s*$/m)[1] ?? '';
+  const jobs = [...jobsBlock.matchAll(/^  [a-z][a-z0-9_-]*:\s*$/gm)];
   if (jobs.length !== 1 || !/^  verify:\s*$/m.test(workflow)) {
     errors.push('CI must contain exactly one verify job');
   }
@@ -67,7 +68,8 @@ export function checkCiStepOrder(workflow) {
     'node scripts/verify-audit-evidence.mjs',
     'node scripts/verify-dependency-inventory.mjs',
   ];
-  const lines = [...workflow.matchAll(/^\s+run:\s*([^\n]+)$/gm)].map((match) => match[1].trim());
+  const lines = [...workflow.matchAll(/^\s+run:\s*([^\n]+)$/gm)]
+    .map((match) => match[1].trim()).filter((value) => value !== '|');
   // The npm audit step has a multiline shell body and is tested separately.
   if (JSON.stringify(lines) !== JSON.stringify(commands)) {
     errors.push('CI validation commands do not match the approved sequence');
