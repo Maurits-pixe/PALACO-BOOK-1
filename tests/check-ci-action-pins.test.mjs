@@ -290,3 +290,15 @@ test('blocks whitespace-varied mandatory action keys rather than accepting incor
   assert.ok(checkCiActionPins(modified).some((error) =>
     error.includes('Noncanonical or unreviewed uses key')));
 });
+
+test('blocks alternative YAML if keys that hide conditional bypasses', () => {
+  for (const injected of [
+    good.replace('      - name: Upload inventory\n',
+      '      - name: Unexpected condition\n        if : false\n      - name: Upload inventory\n'),
+    good.replace('    steps:\n', '    if  : false\n    steps:\n'),
+    good.replace('        if: always()', '        if : always()'),
+  ]) {
+    assert.ok(checkCiActionPins(injected).some((error) =>
+      error.includes('Noncanonical or unreviewed if key')));
+  }
+});
