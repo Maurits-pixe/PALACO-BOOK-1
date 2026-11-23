@@ -116,6 +116,15 @@ export function checkCiActionPins(workflow) {
       !/^[ \t]*- name: Upload sanitized npm audit summary\n[ \t]+if: always\(\)\s*$/m.test(workflow)) {
     errors.push('Only audit evidence upload may declare an if condition');
   }
+  // Disallow unreviewed execution context that can bypass the existing
+  // deterministic single-job verification, inject credentials or launch
+  // containers/services. This deliberately does not parse arbitrary YAML.
+  const forbiddenContexts = [...workflow.matchAll(
+    /^[ \t]*(env|environment|secrets|container|services|strategy|defaults)\s*:/gm,
+  )].map((match) => match[1]);
+  if (forbiddenContexts.length > 0) {
+    errors.push('Unreviewed CI execution context: ' + forbiddenContexts.join(', '));
+  }
   return errors;
 }
 
