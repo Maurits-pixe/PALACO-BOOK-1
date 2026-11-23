@@ -265,3 +265,17 @@ The checker is deliberately scoped to this workflow's text and should
 not be treated as a general-purpose YAML security parser. Branch
 protection and mandatory human review must provide independent
 enforcement before merging workflow changes.
+
+## Mandatory CI steps must not be conditionally bypassed
+
+The workflow policy now rejects **all** `if:` condition declarations
+except the existing `if: always()` on the `Upload sanitized npm audit
+summary` step. This blocks bypass attempts such as `if: false`,
+`if: success()`, GitHub expressions, or a job-level condition that
+silently skips required validation.
+
+The audit artifact upload remains unconditional solely to preserve
+forensic evidence after a failed step. This exception does not change
+the job result or confer release authority. These are narrow
+workflow-text checks, **not** a complete GitHub Actions YAML security
+analysis. Independent reviews and GO-13 HOLD remain mandatory.
