@@ -63,6 +63,13 @@ export function checkCiActionPins(workflow) {
   }
   const errors = [];
   const refs = [...workflow.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm)].map((match) => match[1]);
+  // A YAML key may legally contain whitespace before ':'. The canonical
+  // uses: regex above intentionally enforces one spelling; now reject every
+  // noncanonical uses key so a hidden action cannot evade its action counts.
+  const actionKeys = [...workflow.matchAll(/^[ \t]*-?[ \t]*uses[ \t]*:/gm)];
+  if (actionKeys.length !== refs.length) {
+    errors.push('Noncanonical or unreviewed uses key detected');
+  }
   const counts = Object.fromEntries(Object.keys(EXPECTED_COUNTS).map((action) => [action, 0]));
   if (refs.length === 0) errors.push('Workflow must invoke approved pinned actions');
 
