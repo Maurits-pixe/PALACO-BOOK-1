@@ -22,6 +22,7 @@ jobs:
       - uses: actions/setup-node@${setup} # v4.4.0
         with:
           node-version: 22
+      - name: Check pinned Actions and checkout credential policy
       - name: Upload inventory
         uses: actions/upload-artifact@${upload} # approved
       - name: Upload sanitized npm audit summary
