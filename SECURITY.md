@@ -372,3 +372,20 @@ GitHub scheduling and artifact availability remain external to this
 policy: a canceled run is **not** a passing result. Reviewers must
 verify a successful run against the exact PR HEAD, and GO-13 remains
 HOLD until independently authorized.
+
+## Restricted CI execution contexts
+
+The single-job verification workflow does not use workflow/job/step
+`env` maps, deployment `environment`, `secrets` mapping, custom
+`container`, `services`, `strategy` matrix or `defaults` overrides.
+The CI policy checker rejects new declarations of any of these
+keys. Negative regression tests cover injected environment variables,
+production environment bindings, secret maps, container/service
+launchers, matrices and alternative run defaults.
+
+This prevents those configuration fields from being introduced without
+an explicit policy revision and external review. It is a narrow,
+text-based workflow guard rather than full YAML validation or a
+runtime sandbox. The use of `GITHUB_SHA` and other GitHub-managed
+environment variables by Node scripts does not constitute approval
+for injecting arbitrary environment values. GO-13 stays HOLD.
