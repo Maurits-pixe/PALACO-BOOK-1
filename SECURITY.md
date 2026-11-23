@@ -200,3 +200,18 @@ The pinned actions currently originate from reviewed release identifiers:
 it does **not** guarantee those action implementations or their upstream
 dependencies are free of vulnerabilities. Future updates require review
 of the exact action commit, a deliberate pinned SHA change and new CI evidence.
+
+## Exact GitHub Actions allowlist
+
+The CI policy additionally requires the **specific approved SHA** for each
+GitHub Action, not merely any syntactically valid 40-character hash. The
+allowed invocations are one `actions/checkout`, one `actions/setup-node`
+and two `actions/upload-artifact` steps, each at their documented pinned
+commit. Missing, additional, substituted or stale action versions fail the
+pre-install policy check.
+
+Changes to the Action set therefore require an explicit policy and test
+update, review of the proposed source and SHA, and fresh CI evidence.
+This count-based guard covers the currently used CI workflow; it does not
+analyze arbitrary shell scripts, invoked workflows or actions in other
+workflow files. GO-13 remains HOLD regardless of green checks.
