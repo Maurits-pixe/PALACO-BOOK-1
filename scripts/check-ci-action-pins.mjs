@@ -158,7 +158,7 @@ export function main() {
       maxBuffer: 8 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    trackedPaths = output.split('\\0').filter(Boolean);
+    trackedPaths = output.split('\0').filter(Boolean);
   } catch {
     console.error('CI action pin check FAILED: unreadable tracked workflows');
     return 2;
