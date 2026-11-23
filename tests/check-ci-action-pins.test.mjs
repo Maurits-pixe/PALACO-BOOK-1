@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkCiActionPins, APPROVED_ACTIONS } from '../scripts/check-ci-action-pins.mjs';
+import { checkCiActionPins, checkTrackedWorkflowPaths, APPROVED_ACTIONS } from '../scripts/check-ci-action-pins.mjs';
 
 const checkout = APPROVED_ACTIONS['actions/checkout'];
 const setup = APPROVED_ACTIONS['actions/setup-node'];
@@ -219,5 +219,26 @@ test('rejects unreviewed container, service, matrix and default execution contex
       inserted + '    runs-on: ubuntu-24.04\n');
     assert.ok(checkCiActionPins(changed).some((error) =>
       error.includes('Unreviewed CI execution context')), inserted);
+  }
+});
+
+test('accepts only the approved tracked CI workflow', () => {
+  assert.deepEqual(checkTrackedWorkflowPaths(['.github/workflows/ci.yml']), []);
+  assert.deepEqual(checkTrackedWorkflowPaths([
+    'README.md', '.github/workflows/ci.yml', 'package-lock.json',
+  ]), []);
+});
+
+test('blocks supplemental or renamed workflows that bypass the policy gate', () => {
+  for (const entries of [
+    [],
+    ['.github/workflows/ci.yaml'],
+    ['.github/workflows/ci.yml', '.github/workflows/deploy.yml'],
+    ['.github/workflows/ci.yml', '.github/workflows/manual.yaml'],
+    ['.github/workflows/ci.yml', '.github/workflows/ci.yml'],
+    null,
+    ['.github/workflows/ci.yml', null],
+  ]) {
+    assert.ok(checkTrackedWorkflowPaths(entries).length, String(entries));
   }
 });
