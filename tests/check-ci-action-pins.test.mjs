@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@${checkout} # approved
+      - uses: actions/checkout@${checkout} # v4.2.2
         with:
           persist-credentials: false
-      - uses: actions/setup-node@${setup} # approved
+      - uses: actions/setup-node@${setup} # v4.4.0
         with:
           node-version: 22
       - name: Upload inventory
@@ -140,4 +140,27 @@ test('rejects altered audit condition and job-level conditional execution', () =
     '    if: false\n    runs-on: ubuntu-24.04');
   assert.ok(checkCiActionPins(skippedJob).some((error) =>
     error.includes('if condition')));
+});
+
+test('rejects unreviewed checkout ref, repository and fetch settings', () => {
+  for (const inserted of ['          repository: unrelated/project\n',
+    '          ref: untrusted\n', '          fetch-depth: 0\n']) {
+    const modified = good.replace('          persist-credentials: false\n',
+      '          persist-credentials: false\n' + inserted);
+    assert.ok(checkCiActionPins(modified)
+      .some((error) => error.includes('setup inputs')));
+  }
+});
+
+test('requires reviewed Node 22 setup and no extra cache, registry or token inputs', () => {
+  for (const modified of [
+    good.replace('node-version: 22', 'node-version: 20'),
+    good.replace('node-version: 22', 'node-version: 24'),
+    good.replace('          node-version: 22\n', '          node-version: 22\n          cache: npm\n'),
+    good.replace('          node-version: 22\n', '          node-version: 22\n          registry-url: https://example.invalid\n'),
+    good.replace('          node-version: 22\n', '          node-version: 22\n          token: ${{ secrets.ANOTHER_TOKEN }}\n'),
+  ]) {
+    assert.ok(checkCiActionPins(modified)
+      .some((error) => error.includes('setup inputs')));
+  }
 });
