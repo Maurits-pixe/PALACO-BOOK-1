@@ -78,3 +78,20 @@ test('rejects missing or malformed audit evidence provenance', () => {
   assert.throws(() => makeAuditProvenance('not-a-git-sha', Buffer.from('abc')));
   assert.throws(() => makeAuditProvenance('a'.repeat(40), null));
 });
+
+test('rejects nonstandard npm audit exit codes even with valid findings', () => {
+  const findings = report({ low: 1, total: 1 });
+  for (const exitCode of [2, 3, 127, 255, -1, 1.5, 'invalid']) {
+    assert.equal(summarizeAudit(findings, exitCode).status, 'ERROR');
+    assert.equal(summarizeAudit(report(), exitCode).status, 'ERROR');
+  }
+  assert.equal(summarizeAudit(findings, 1).status, 'FINDINGS');
+  assert.equal(summarizeAudit(report(), 0).status, 'NO_FINDINGS');
+});
+
+test('unknown or malformed audit gate states fail closed', () => {
+  for (const value of [null, undefined, {}, { status: 'SUCCESS' },
+    { status: 'CLEAN' }, { status: '' }]) {
+    assert.equal(auditGateExitCode(value), 2);
+  }
+});
