@@ -81,10 +81,14 @@ export function checkCiActionPins(workflow) {
   if (errorOverrides.length > 0) {
     errors.push('CI must not use continue-on-error');
   }
-  const alwaysConditions = [...workflow.matchAll(/^[ \t]*if:\s*always\(\)\s*$/gm)];
-  if (alwaysConditions.length !== 1 ||
+  // Reject ALL additional conditional steps, not just additional always()
+  // expressions. A condition such as "if: false" could silently bypass a
+  // required verification while allowing the overall job to look green.
+  const allConditions = [...workflow.matchAll(/^[ \t]*if\s*:\s*([^\n]*)$/gm)]
+    .map((match) => match[1].trim());
+  if (allConditions.length !== 1 || allConditions[0] !== 'always()' ||
       !/^[ \t]*- name: Upload sanitized npm audit summary\n[ \t]+if: always\(\)\s*$/m.test(workflow)) {
-    errors.push('Only audit evidence upload may use if: always()');
+    errors.push('Only audit evidence upload may declare an if condition');
   }
   return errors;
 }
