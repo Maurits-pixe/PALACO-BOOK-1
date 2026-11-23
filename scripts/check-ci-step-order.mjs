@@ -72,6 +72,14 @@ export function checkCiStepOrder(workflow) {
   ];
   const lines = [...workflow.matchAll(/^\s+run:\s*([^\n]+)$/gm)]
     .map((match) => match[1].trim()).filter((value) => value !== '|');
+  // The exact run list above only recognizes canonical `run:` keys.
+  // Count all YAML whitespace variants to prevent hidden extra commands
+  // such as `run : echo bypass` from escaping that comparison.
+  const allRunKeys = [...workflow.matchAll(/^[ \t]*-?[ \t]*run[ \t]*:/gm)];
+  const canonicalRunKeys = [...workflow.matchAll(/^[ \t]+run:/gm)];
+  if (allRunKeys.length !== canonicalRunKeys.length) {
+    errors.push('Noncanonical or unreviewed run key detected');
+  }
   // The npm audit step has a multiline shell body and is tested separately.
   if (JSON.stringify(lines) !== JSON.stringify(commands)) {
     errors.push('CI validation commands do not match the approved sequence');
