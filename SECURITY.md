@@ -233,3 +233,18 @@ inside the workflow, it cannot prevent a malicious action or privileged
 event from running before the checker. Repository branch protection,
 workflow review and GitHub settings must independently enforce the policy.
 A passing CI result alone is not authorization to merge or deploy.
+
+## Runner environment and execution bound
+
+The CI job now uses the explicit GitHub-hosted runner label
+`ubuntu-24.04`, rather than the moving `ubuntu-latest` alias.
+The workflow policy also requires exactly one `runs-on` declaration
+with that value and exactly one `timeout-minutes: 20` declaration.
+A mutable, self-hosted or unreviewed runner substitution, duplicate
+runner declaration, or enlarged/missing timeout fails the policy gate.
+
+This pins the **Ubuntu release label**, not the complete hosted
+runner image or its package inventory. GitHub may still update
+software on that runner. Any environment change requires fresh
+CI evidence. The checker executes inside CI and is not a substitute
+for branch protection or independent workflow review.
