@@ -11,6 +11,9 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-24.04
@@ -164,4 +167,29 @@ test('requires reviewed Node 22 setup and no extra cache, registry or token inpu
     assert.ok(checkCiActionPins(modified)
       .some((error) => error.includes('setup inputs')));
   }
+});
+
+test('requires per-ref concurrency and cancel-in-progress', () => {
+  const cases = [
+    good.replace('cancel-in-progress: true', 'cancel-in-progress: false'),
+    good.replace('ci-${{ github.workflow }}-${{ github.ref }}', 'ci-global'),
+    good.replace('concurrency:\n', 'concurrency:\n  group: ci-unreviewed\n'),
+    good.replace('  cancel-in-progress: true\n', ''),
+    good.replace('concurrency:\n  group: ci-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n', ''),
+  ];
+  for (const item of cases) {
+    assert.ok(checkCiActionPins(item).some((error) =>
+      error.includes('concurrency group')), item);
+  }
+});
+
+test('rejects job-level concurrency override or duplicate top-level block', () => {
+  const jobOverride = good.replace('  verify:\n',
+    '  verify:\n    concurrency: unsafe-group\n');
+  assert.ok(checkCiActionPins(jobOverride).some((error) =>
+    error.includes('concurrency group')));
+  const duplicate = good.replace('jobs:\n',
+    'concurrency:\n  group: another\n  cancel-in-progress: false\njobs:\n');
+  assert.ok(checkCiActionPins(duplicate).some((error) =>
+    error.includes('concurrency group')));
 });
