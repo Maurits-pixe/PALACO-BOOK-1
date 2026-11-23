@@ -327,3 +327,19 @@ file substitutions, alternate missing-file handling, retention changes and
 unreviewed upload options. These checks protect the workflow's declared
 settings, not external artifact-storage integrity or independent release
 authority. GO-13 remains HOLD.
+
+## Reviewed checkout and Node action inputs
+
+In addition to exact approved Action commit SHAs, the CI policy now
+verifies the **complete reviewed initial action-setup sequence**:
+checkout without persisted credentials, followed by `setup-node`
+using Node.js 22, with no additional action inputs. Changes that
+select another checkout repository or ref, change fetch depth, alter
+the Node runtime, add caching or custom package registry settings,
+or supply a different token fail the policy gate.
+
+These checks constrain the workflow configuration but do not pin
+the underlying Node.js patch release or runner image revision, and
+cannot independently verify the upstream Action code. The workflow
+must still undergo human review and branch-protection checks before
+merging. GO-13 and release authorization remain HOLD / DENY.
