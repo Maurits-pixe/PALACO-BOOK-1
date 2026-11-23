@@ -122,3 +122,22 @@ test('allows unconditional audit artifact upload only, not bypassed checks', () 
   const removed = good.replace('        if: always()\n', '');
   assert.ok(checkCiActionPins(removed).some((error) => error.includes('Only audit evidence')));
 });
+
+test('rejects any extra conditional verification step, including false and expressions', () => {
+  for (const condition of ['false', 'success()', '${{ false }}', 'always()']) {
+    const modified = good.replace('        with:\n          node-version: 22',
+      `        if: ${condition}\n        with:\n          node-version: 22`);
+    assert.ok(checkCiActionPins(modified)
+      .some((error) => error.includes('if condition')), condition);
+  }
+});
+
+test('rejects altered audit condition and job-level conditional execution', () => {
+  const changed = good.replace('        if: always()', '        if: success()');
+  assert.ok(checkCiActionPins(changed).some((error) =>
+    error.includes('if condition')));
+  const skippedJob = good.replace('    runs-on: ubuntu-24.04',
+    '    if: false\n    runs-on: ubuntu-24.04');
+  assert.ok(checkCiActionPins(skippedJob).some((error) =>
+    error.includes('if condition')));
+});
