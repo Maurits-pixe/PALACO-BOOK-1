@@ -78,6 +78,16 @@ export function checkCiActionPins(workflow) {
       grantedPermissions[0] !== 'contents: read') {
     errors.push('Job-level or unexpected permissions override');
   }
+  // Preserve the per-ref cancellation policy and avoid unreviewed
+  // job-level concurrency overrides or global group collisions.
+  const concurrencyHeaders = [...workflow.matchAll(/^[ \t]*concurrency\s*:/gm)];
+  const expectedConcurrency = "concurrency:\n  group: ci-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n";
+  const concurrencyBlock = workflow.match(/^concurrency:[^\n]*\n((?:[ \t]+[^\n]*\n)*)/m);
+  if (concurrencyHeaders.length !== 1 ||
+      !concurrencyBlock ||
+      'concurrency:\n' + concurrencyBlock[1] !== expectedConcurrency) {
+    errors.push('CI concurrency group and cancellation policy differ from reviewed configuration');
+  }
   // Require a predictable GitHub-hosted runner and bounded job runtime.
   // This is an explicit OS release, not a pin of the runner image revision.
   const runners = [...workflow.matchAll(/^[ \t]*runs-on:[ \t]*([^\n#]+)/gm)]
