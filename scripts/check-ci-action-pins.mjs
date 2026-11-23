@@ -74,6 +74,18 @@ export function checkCiActionPins(workflow) {
   if (timeouts.length !== 1 || timeouts[0] !== '20') {
     errors.push('CI must have a single 20-minute timeout');
   }
+  // Never mask a failed verification step or job with continue-on-error.
+  // The only intentionally unconditional step is sanitized audit artifact
+  // collection, not a bypass of any verification gate.
+  const errorOverrides = [...workflow.matchAll(/^[ \t]*continue-on-error\s*:/gm)];
+  if (errorOverrides.length > 0) {
+    errors.push('CI must not use continue-on-error');
+  }
+  const alwaysConditions = [...workflow.matchAll(/^[ \t]*if:\s*always\(\)\s*$/gm)];
+  if (alwaysConditions.length !== 1 ||
+      !/^[ \t]*- name: Upload sanitized npm audit summary\n[ \t]+if: always\(\)\s*$/m.test(workflow)) {
+    errors.push('Only audit evidence upload may use if: always()');
+  }
   return errors;
 }
 
