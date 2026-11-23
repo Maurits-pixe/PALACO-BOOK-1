@@ -45,6 +45,21 @@ export function checkCiActionPins(workflow) {
   if (!/^permissions:\s*\n\s*contents:\s*read\s*$/m.test(workflow)) {
     errors.push('Global permissions must remain contents: read');
   }
+  // Limit workflow execution to the two unprivileged entry points.
+  // Disallow new event types that could expose elevated tokens or secrets.
+  const trigger = workflow.match(/^on:\s*\n((?:[ \t]+[^\n]*\n)*)/m);
+  const events = trigger?.[1]?.split('\n').map((line) => line.trim()).filter(Boolean) ?? [];
+  if (events.length !== 2 || events[0] !== 'push:' || events[1] !== 'pull_request:') {
+    errors.push('CI may trigger only on push and pull_request');
+  }
+
+  // A job-level permissions override would supersede the read-only global
+  // permissions declaration. Require exactly one global permissions block.
+  const permissionHeaders = [...workflow.matchAll(/^[ \t]*permissions\s*:/gm)];
+  if (permissionHeaders.length !== 1 ||
+      !/^permissions:\s*\n  contents:\s*read\s*$/m.test(workflow)) {
+    errors.push('Job-level or unexpected permissions override');
+  }
   return errors;
 }
 
