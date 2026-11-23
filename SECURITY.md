@@ -248,3 +248,20 @@ runner image or its package inventory. GitHub may still update
 software on that runner. Any environment change requires fresh
 CI evidence. The checker executes inside CI and is not a substitute
 for branch protection or independent workflow review.
+
+## No masked CI failures
+
+The CI workflow policy now refuses `continue-on-error` declarations
+anywhere in the checked workflow, including a literal `false` that could
+later be changed unnoticed. A failed security, test, build or provenance
+check must fail its job.
+
+The sole approved unconditional `if: always()` declaration is the
+upload step named `Upload sanitized npm audit summary`. Keeping this
+evidence upload unconditional supports triage when a previous step
+fails; it does not turn the failed job green or authorize release.
+
+The checker is deliberately scoped to this workflow's text and should
+not be treated as a general-purpose YAML security parser. Branch
+protection and mandatory human review must provide independent
+enforcement before merging workflow changes.
