@@ -27,6 +27,8 @@ export const REQUIRED_STEPS = Object.freeze([
   'Upload sanitized npm audit summary',
 ]);
 
+export const APPROVED_ARTIFACT_UPLOAD_TAIL = "      - name: Upload dependency inventory for review\n        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n        with:\n          name: npm-dependency-inventory\n          path: npm-dependency-inventory.json\n          if-no-files-found: error\n          retention-days: 7\n      - name: Upload sanitized npm audit summary\n        if: always()\n        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n        with:\n          name: npm-audit-summary\n          path: npm-audit-summary.json\n          if-no-files-found: warn\n          retention-days: 7\n";
+
 export function checkCiStepOrder(workflow) {
   if (typeof workflow !== 'string' || !workflow.trim()) {
     return ['Missing CI workflow'];
@@ -92,6 +94,14 @@ export function checkCiStepOrder(workflow) {
     .filter((line) => line.length > 0).map((line) => line.slice(10)) ?? [];
   if (JSON.stringify(actualAuditCommands) !== JSON.stringify(expectedAuditCommands)) {
     errors.push('Mandatory npm vulnerability scan shell body differs from approved commands');
+  }
+  // Publication must use the exact reviewed sanitized files. Comparing the
+  // entire final step blocks rejects altered names, globs, unknown settings,
+  // retention changes, upload permissions and any trailing extra steps.
+  const uploadOffset = workflow.indexOf('      - name: Upload dependency inventory for review');
+  if (uploadOffset < 0 ||
+      workflow.slice(uploadOffset) !== APPROVED_ARTIFACT_UPLOAD_TAIL) {
+    errors.push('Audit and inventory artifact publication differs from approved configuration');
   }
   return errors;
 }
