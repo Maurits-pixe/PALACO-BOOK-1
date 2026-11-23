@@ -436,3 +436,16 @@ those behaviors safe or apply the primary CI policy to them.
 This internal check cannot prevent a privileged workflow from starting
 before the CI check. Repository rulesets, branch protection and a
 human security review remain independent requirements. GO-13 HOLD.
+
+## Noncanonical GitHub Actions `uses` keys
+
+The CI Action SHA checker now counts every YAML-style `uses` key,
+including valid-but-noncanonical whitespace variants such as `uses :`.
+Any variant that the strict approved-action scanner does not recognize
+fails closed instead of silently skipping an extra unpinned Action.
+Regression tests exercise hidden local/external Actions and mutated
+mandatory action lines.
+
+This is a targeted guard against alternate key spelling, not a full YAML
+parser. Other ways to alter workflow semantics still require independent
+GitHub branch protection and code review. GO-13 HOLD.
