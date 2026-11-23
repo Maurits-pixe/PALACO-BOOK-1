@@ -412,3 +412,27 @@ separate security review. This gate checks file names, not file contents.
 prevent a newly added privileged workflow from starting before the check.
 Repository rulesets, branch protection and independent human approval
 remain mandatory. GO-13 stays HOLD / authorization DENY.
+
+## Legacy workflow content drift boundary
+
+In addition to checking the five tracked workflow paths, the CI policy
+now hashes the working-tree contents of the four **existing non-CI
+workflows** using `git hash-object` and compares each to its explicitly
+recorded Git blob identifier. Any missing file or content drift fails
+the CI policy gate until a reviewer intentionally updates the baseline.
+The actively maintained `ci.yml` is not frozen by this legacy-content
+gate; its behavior is constrained by separate checks.
+
+**Residual risks, not security approvals:** the legacy workflows still
+contain mutable action tags (`@v4`, `@v5`), moving
+`ubuntu-latest` runners, and some `npm install` commands. The
+live-provider conformance workflows also use manually initiated runs
+with secrets and intentionally continue past the provider-execution step
+to produce a separate verdict. These existing behaviors need their own
+dedicated review before any security or release assurance can be made.
+Pinning their existing blobs only detects changes; it does not make
+those behaviors safe or apply the primary CI policy to them.
+
+This internal check cannot prevent a privileged workflow from starting
+before the CI check. Repository rulesets, branch protection and a
+human security review remain independent requirements. GO-13 HOLD.
