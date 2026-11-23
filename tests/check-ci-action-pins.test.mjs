@@ -272,3 +272,21 @@ test('refuses altered, deleted or unavailable legacy workflow content', () => {
     error.includes(path)));
   assert.ok(checkLegacyWorkflowBlobs(null).length);
 });
+
+test('blocks noncanonical YAML uses keys that bypass action reference scanning', () => {
+  const hidden = good.replace('      - name: Upload inventory\n',
+    '      - uses : untrusted/action@v1\n      - name: Upload inventory\n');
+  assert.ok(checkCiActionPins(hidden).some((error) =>
+    error.includes('Noncanonical or unreviewed uses key')));
+  const hiddenNested = good.replace('    steps:\n',
+    '    steps:\n      - uses  : ./local-action\n');
+  assert.ok(checkCiActionPins(hiddenNested).some((error) =>
+    error.includes('Noncanonical or unreviewed uses key')));
+});
+
+test('blocks whitespace-varied mandatory action keys rather than accepting incorrect counts', () => {
+  const modified = good.replace('      - uses: actions/setup-node@',
+    '      - uses : actions/setup-node@');
+  assert.ok(checkCiActionPins(modified).some((error) =>
+    error.includes('Noncanonical or unreviewed uses key')));
+});
