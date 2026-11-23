@@ -343,3 +343,17 @@ the underlying Node.js patch release or runner image revision, and
 cannot independently verify the upstream Action code. The workflow
 must still undergo human review and branch-protection checks before
 merging. GO-13 and release authorization remain HOLD / DENY.
+
+## Fail-closed npm audit status handling
+
+The npm audit evidence generator treats only npm scanner exit status
+`0` as a clean scan and `1` as a completed scan reporting findings.
+Any other status is classified as a scanner/infrastructure `ERROR`,
+even if partial vulnerability counts are present. An unexpected,
+missing or malformed audit gate result cannot return a successful
+exit code. Regression tests cover nonstandard exit codes and
+unrecognized result states.
+
+These controls prevent partial scanner failures from being mistaken
+for valid security evidence. They do not establish that all packages
+are vulnerability-free, and release authorization remains `DENY`.
