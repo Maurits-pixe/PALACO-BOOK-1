@@ -10,7 +10,9 @@ const LEVELS = ['info', 'low', 'moderate', 'high', 'critical'];
 
 export function summarizeAudit(input, exitCode) {
   const statusCode = Number(exitCode);
-  if (!Number.isInteger(statusCode) || statusCode < 0) {
+  // npm audit uses exit 0 for clean scans and exit 1 for vulnerability
+  // findings. Any other code is treated as an infrastructure/scanner error.
+  if (!Number.isInteger(statusCode) || (statusCode !== 0 && statusCode !== 1)) {
     return { status: 'ERROR', reason: 'Invalid scanner exit status', counts: null };
   }
   if (!input || typeof input !== 'object' || Array.isArray(input) ||
@@ -69,9 +71,10 @@ export function extractAffectedPackages(input) {
 }
 
 export function auditGateExitCode(result) {
-  if (result.status === 'ERROR') return 2;
-  if (result.status === 'FINDINGS') return 1;
-  return 0;
+  if (result?.status === 'NO_FINDINGS') return 0;
+  if (result?.status === 'FINDINGS') return 1;
+  // Unexpected or absent states never mean successful security verification.
+  return 2;
 }
 
 // Bind a sanitized npm audit report to the exact Git commit and lockfile.
