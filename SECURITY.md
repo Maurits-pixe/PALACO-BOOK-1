@@ -215,3 +215,21 @@ update, review of the proposed source and SHA, and fresh CI evidence.
 This count-based guard covers the currently used CI workflow; it does not
 analyze arbitrary shell scripts, invoked workflows or actions in other
 workflow files. GO-13 remains HOLD regardless of green checks.
+
+## Restricted CI events and token permissions
+
+The CI policy also requires exactly two unprivileged workflow events:
+`push` and `pull_request`. Changes introducing
+`pull_request_target`, `workflow_run`, `workflow_dispatch`, or other
+events fail the in-workflow policy check pending explicit review.
+
+Global GitHub token permissions must remain `contents: read`, with
+**no job-level permissions overrides** and no additional global
+scopes such as `id-token: write`. Negative tests exercise event changes,
+permission elevation and duplicated permission sections.
+
+**Important boundary:** because this policy checker executes as a step
+inside the workflow, it cannot prevent a malicious action or privileged
+event from running before the checker. Repository branch protection,
+workflow review and GitHub settings must independently enforce the policy.
+A passing CI result alone is not authorization to merge or deploy.
