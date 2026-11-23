@@ -42,6 +42,22 @@ export function checkCiActionPins(workflow) {
   // Keep the checkout token out of persisted git configuration.
   const checkout = workflow.match(/^\s*-\s*uses:\s*actions\/checkout@[a-f0-9]{40}[^\n]*\n\s*with:\s*\n(?:\s+[^\n]*\n)*?\s+persist-credentials:\s*false\s*$/m);
   if (!checkout) errors.push('Checkout must set persist-credentials: false');
+
+  // Enforce the entire reviewed input configuration for both setup actions.
+  // An otherwise pinned checkout could fetch a different repository/ref, or
+  // setup-node could silently change runtimes, cache or registry settings.
+  const expectedSetup = [
+    `      - uses: actions/checkout@${APPROVED_ACTIONS['actions/checkout']} # v4.2.2`,
+    '        with:',
+    '          persist-credentials: false',
+    `      - uses: actions/setup-node@${APPROVED_ACTIONS['actions/setup-node']} # v4.4.0`,
+    '        with:',
+    '          node-version: 22',
+    '      - name: Check pinned Actions and checkout credential policy',
+  ].join('\n');
+  if (!workflow.includes(expectedSetup)) {
+    errors.push('Checkout and Node setup inputs differ from the reviewed CI configuration');
+  }
   if (!/^permissions:\s*\n\s*contents:\s*read\s*$/m.test(workflow)) {
     errors.push('Global permissions must remain contents: read');
   }
