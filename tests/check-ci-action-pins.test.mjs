@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkCiActionPins, checkTrackedWorkflowPaths, APPROVED_ACTIONS } from '../scripts/check-ci-action-pins.mjs';
+import { checkCiActionPins, checkTrackedWorkflowPaths, checkLegacyWorkflowBlobs, LEGACY_WORKFLOW_BLOBS, APPROVED_ACTIONS } from '../scripts/check-ci-action-pins.mjs';
 
 const checkout = APPROVED_ACTIONS['actions/checkout'];
 const setup = APPROVED_ACTIONS['actions/setup-node'];
@@ -255,4 +255,20 @@ test('rejects new, missing, renamed or duplicate tracked workflows', () => {
   ]) {
     assert.ok(checkTrackedWorkflowPaths(paths).length, String(paths));
   }
+});
+
+test('accepts the exact original content hashes of four legacy workflows', () => {
+  assert.deepEqual(checkLegacyWorkflowBlobs({ ...LEGACY_WORKFLOW_BLOBS }), []);
+});
+
+test('refuses altered, deleted or unavailable legacy workflow content', () => {
+  const [path] = Object.keys(LEGACY_WORKFLOW_BLOBS);
+  const altered = { ...LEGACY_WORKFLOW_BLOBS, [path]: '0'.repeat(40) };
+  assert.ok(checkLegacyWorkflowBlobs(altered).some((error) =>
+    error.includes(path)));
+  const missing = { ...LEGACY_WORKFLOW_BLOBS };
+  delete missing[path];
+  assert.ok(checkLegacyWorkflowBlobs(missing).some((error) =>
+    error.includes(path)));
+  assert.ok(checkLegacyWorkflowBlobs(null).length);
 });
