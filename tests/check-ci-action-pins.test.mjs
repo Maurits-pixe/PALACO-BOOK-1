@@ -6,6 +6,9 @@ const checkout = APPROVED_ACTIONS['actions/checkout'];
 const setup = APPROVED_ACTIONS['actions/setup-node'];
 const upload = APPROVED_ACTIONS['actions/upload-artifact'];
 const good = `name: CI
+on:
+  push:
+  pull_request:
 permissions:
   contents: read
 jobs:
@@ -47,4 +50,23 @@ test('requires non-persistent checkout credentials and read-only token', () => {
   assert.ok(checkCiActionPins(good.replace('persist-credentials: false', '')).length);
   assert.ok(checkCiActionPins(good.replace('contents: read', 'contents: write')).length);
   assert.ok(checkCiActionPins(null).length);
+});
+
+test('blocks privileged workflow triggers and replacement of approved events', () => {
+  assert.ok(checkCiActionPins(good.replace('  pull_request:\n', '  pull_request_target:\n'))
+    .some((error) => error.includes('trigger only')));
+  assert.ok(checkCiActionPins(good.replace('  push:\n', '  workflow_dispatch:\n'))
+    .some((error) => error.includes('trigger only')));
+  assert.ok(checkCiActionPins(good.replace('  pull_request:\n', '  pull_request:\n  workflow_run:\n'))
+    .some((error) => error.includes('trigger only')));
+  assert.ok(checkCiActionPins(good.replace('on:\n  push:\n  pull_request:\n', ''))
+    .some((error) => error.includes('trigger only')));
+});
+
+test('blocks job-level permissions overriding global read-only access', () => {
+  const jobOverride = good.replace('  verify:\n', '  verify:\n    permissions:\n      contents: write\n');
+  assert.ok(checkCiActionPins(jobOverride)
+    .some((error) => error.includes('permissions override')));
+  assert.ok(checkCiActionPins(good.replace('  contents: read', '  contents: read\n  id-token: write'))
+    .some((error) => error.includes('permissions override')));
 });
