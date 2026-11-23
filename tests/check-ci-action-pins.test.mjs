@@ -222,23 +222,37 @@ test('rejects unreviewed container, service, matrix and default execution contex
   }
 });
 
-test('accepts only the approved tracked CI workflow', () => {
-  assert.deepEqual(checkTrackedWorkflowPaths(['.github/workflows/ci.yml']), []);
-  assert.deepEqual(checkTrackedWorkflowPaths([
-    'README.md', '.github/workflows/ci.yml', 'package-lock.json',
-  ]), []);
+test('accepts exactly the established tracked GitHub workflow inventory', () => {
+  const approved = [
+    '.github/workflows/ci.yml',
+    '.github/workflows/live-provider-conformance-launcher.yml',
+    '.github/workflows/live-provider-conformance.yml',
+    '.github/workflows/registry-contract.yml',
+    '.github/workflows/veldgids-runtime-ci.yml',
+  ];
+  assert.deepEqual(checkTrackedWorkflowPaths(approved), []);
+  assert.deepEqual(checkTrackedWorkflowPaths([...approved].reverse()), []);
+  assert.deepEqual(checkTrackedWorkflowPaths(['README.md', ...approved]), []);
 });
 
-test('blocks supplemental or renamed workflows that bypass the policy gate', () => {
-  for (const entries of [
+test('rejects new, missing, renamed or duplicate tracked workflows', () => {
+  const approved = [
+    '.github/workflows/ci.yml',
+    '.github/workflows/live-provider-conformance-launcher.yml',
+    '.github/workflows/live-provider-conformance.yml',
+    '.github/workflows/registry-contract.yml',
+    '.github/workflows/veldgids-runtime-ci.yml',
+  ];
+  for (const paths of [
     [],
-    ['.github/workflows/ci.yaml'],
-    ['.github/workflows/ci.yml', '.github/workflows/deploy.yml'],
-    ['.github/workflows/ci.yml', '.github/workflows/manual.yaml'],
-    ['.github/workflows/ci.yml', '.github/workflows/ci.yml'],
+    approved.slice(1),
+    [...approved, '.github/workflows/deploy.yml'],
+    [...approved, '.github/workflows/manual.yaml'],
+    [...approved, approved[0]],
+    approved.map((p) => p === '.github/workflows/ci.yml' ? '.github/workflows/ci.yaml' : p),
     null,
-    ['.github/workflows/ci.yml', null],
+    [...approved, null],
   ]) {
-    assert.ok(checkTrackedWorkflowPaths(entries).length, String(entries));
+    assert.ok(checkTrackedWorkflowPaths(paths).length, String(paths));
   }
 });
