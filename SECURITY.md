@@ -357,3 +357,18 @@ unrecognized result states.
 These controls prevent partial scanner failures from being mistaken
 for valid security evidence. They do not establish that all packages
 are vulnerability-free, and release authorization remains `DENY`.
+
+## CI concurrency and branch isolation
+
+The CI policy requires one top-level concurrency declaration:
+`ci-${{ github.workflow }}-${{ github.ref }}` with
+`cancel-in-progress: true`. The workflow checker rejects changed or
+missing cancellation, unreviewed global grouping, duplicate blocks,
+and job-level overrides. Grouping by workflow and full Git ref helps
+prevent unrelated branches from canceling each other's verification
+while replacing outdated runs on the same ref.
+
+GitHub scheduling and artifact availability remain external to this
+policy: a canceled run is **not** a passing result. Reviewers must
+verify a successful run against the exact PR HEAD, and GO-13 remains
+HOLD until independently authorized.
