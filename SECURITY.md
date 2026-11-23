@@ -310,3 +310,20 @@ Negative regression tests cover each case.
 This is a narrow defense against accidental or adversarial changes to
 the checked workflow body, not a general shell parser. External branch
 protection and review are still required; GO-13 stays HOLD.
+
+## Pinned forensic artifact publication
+
+The CI gate now compares the **entire final artifact upload configuration**
+against the reviewed publication policy. It permits only the generated
+`npm-dependency-inventory.json` and `npm-audit-summary.json` files, uploaded
+through the approved pinned action. Both artifacts retain a seven-day
+lifetime. The inventory upload requires its file (`if-no-files-found:
+error`); the audit upload uses `if: always()` and warns when no sanitized
+report exists after an earlier failed job.
+
+Changes to artifact paths, names, retention periods, extra upload options,
+or trailing workflow steps must fail the policy gate. Regression tests cover
+file substitutions, alternate missing-file handling, retention changes and
+unreviewed upload options. These checks protect the workflow's declared
+settings, not external artifact-storage integrity or independent release
+authority. GO-13 remains HOLD.
