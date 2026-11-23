@@ -13,6 +13,8 @@ permissions:
   contents: read
 jobs:
   verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@${checkout} # approved
         with:
@@ -81,4 +83,22 @@ test('global permissions remain exactly one contents-read entry', () => {
   const duplicated = good.replace('jobs:\n', 'permissions:\n  contents: read\njobs:\n');
   assert.ok(checkCiActionPins(duplicated).some((error) =>
     error.includes('permissions override')));
+});
+
+test('requires explicit Ubuntu 24.04 instead of mutable or self-hosted runners', () => {
+  assert.ok(checkCiActionPins(good.replace('runs-on: ubuntu-24.04', 'runs-on: ubuntu-latest'))
+    .some((error) => error.includes('ubuntu-24.04 runner')));
+  assert.ok(checkCiActionPins(good.replace('runs-on: ubuntu-24.04', 'runs-on: self-hosted'))
+    .some((error) => error.includes('ubuntu-24.04 runner')));
+  assert.ok(checkCiActionPins(good + '      runs-on: ubuntu-24.04\n')
+    .some((error) => error.includes('ubuntu-24.04 runner')));
+});
+
+test('requires exactly one bounded 20-minute CI job timeout', () => {
+  assert.ok(checkCiActionPins(good.replace('timeout-minutes: 20', 'timeout-minutes: 360'))
+    .some((error) => error.includes('20-minute timeout')));
+  assert.ok(checkCiActionPins(good.replace('    timeout-minutes: 20\n', ''))
+    .some((error) => error.includes('20-minute timeout')));
+  assert.ok(checkCiActionPins(good + '      timeout-minutes: 120\n')
+    .some((error) => error.includes('20-minute timeout')));
 });
