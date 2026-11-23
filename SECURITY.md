@@ -297,3 +297,16 @@ Actions YAML parser; it does not prove the contents of arbitrary
 multiline scripts are benign. Because it executes within the CI
 workflow, protection of workflow changes requires external repository
 rules and independent human review. GO-13 remains HOLD.
+
+## Exact audit shell sequence
+
+The CI step-order gate now checks the **complete approved multiline bash
+body** that invokes `npm audit`: cleanup trap, exit-code capture,
+re-enabling fail-on-error and the sanitized summary generator. It rejects
+injected shell commands, changed interpreters, missing cleanup, and
+reordered handling even when the required audit command still appears.
+Negative regression tests cover each case.
+
+This is a narrow defense against accidental or adversarial changes to
+the checked workflow body, not a general shell parser. External branch
+protection and review are still required; GO-13 stays HOLD.
