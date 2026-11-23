@@ -70,3 +70,15 @@ test('blocks job-level permissions overriding global read-only access', () => {
   assert.ok(checkCiActionPins(good.replace('  contents: read', '  contents: read\n  id-token: write'))
     .some((error) => error.includes('permissions override')));
 });
+
+test('global permissions remain exactly one contents-read entry', () => {
+  const withOidc = good.replace('  contents: read', '  contents: read\n  id-token: write');
+  assert.ok(checkCiActionPins(withOidc).some((error) =>
+    error.includes('permissions override')));
+  const withPackages = good.replace('  contents: read', '  contents: read\n  packages: read');
+  assert.ok(checkCiActionPins(withPackages).some((error) =>
+    error.includes('permissions override')));
+  const duplicated = good.replace('jobs:\n', 'permissions:\n  contents: read\njobs:\n');
+  assert.ok(checkCiActionPins(duplicated).some((error) =>
+    error.includes('permissions override')));
+});
