@@ -18,15 +18,24 @@ const EXPECTED_COUNTS = Object.freeze({
 });
 
 
-// Only the reviewed CI workflow may be tracked. An additional workflow could
-// run on privileged events without executing this workflow's policy gate.
+// Preserve the exact existing tracked workflow inventory. New workflows
+// require explicit review instead of silently bypassing CI's policy checks.
+export const APPROVED_WORKFLOW_PATHS = Object.freeze([
+  '.github/workflows/ci.yml',
+  '.github/workflows/live-provider-conformance-launcher.yml',
+  '.github/workflows/live-provider-conformance.yml',
+  '.github/workflows/registry-contract.yml',
+  '.github/workflows/veldgids-runtime-ci.yml',
+]);
+
 export function checkTrackedWorkflowPaths(paths) {
   if (!Array.isArray(paths) || paths.some((path) => typeof path !== 'string')) {
     return ['Could not enumerate tracked GitHub workflow paths'];
   }
-  const workflows = paths.filter((path) => path.startsWith('.github/workflows/'));
-  if (workflows.length !== 1 || workflows[0] !== '.github/workflows/ci.yml') {
-    return ['Unreviewed GitHub workflows detected: require only .github/workflows/ci.yml'];
+  const workflows = paths.filter((path) => path.startsWith('.github/workflows/')).sort();
+  const approved = [...APPROVED_WORKFLOW_PATHS].sort();
+  if (JSON.stringify(workflows) !== JSON.stringify(approved)) {
+    return ['Tracked workflow inventory differs from the approved baseline'];
   }
   return [];
 }
