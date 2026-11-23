@@ -74,9 +74,24 @@ export function checkCiStepOrder(workflow) {
   if (JSON.stringify(lines) !== JSON.stringify(commands)) {
     errors.push('CI validation commands do not match the approved sequence');
   }
-  if (!/npm audit --json --audit-level=low > npm-audit\.raw\.json/.test(workflow) ||
-      !/node scripts\/summarize-npm-audit\.mjs "\$audit_exit"/.test(workflow)) {
-    errors.push('Mandatory npm vulnerability scan or summary missing');
+  // Reconstruct the entire approved audit shell body. Merely searching for
+  // required commands is insufficient: an extra command or reordered trap
+  // can silently weaken the fail-closed scanner or leak raw scanner output.
+  const auditStep = workflow.match(
+    /^      - name: Collect npm vulnerability audit evidence\n        shell: bash\n        run: \|\n((?:          [^\n]*\n)+)/m,
+  );
+  const expectedAuditCommands = [
+    "trap 'rm -f npm-audit.raw.json' EXIT",
+    'set +e',
+    'npm audit --json --audit-level=low > npm-audit.raw.json',
+    'audit_exit=$?',
+    'set -e',
+    'node scripts/summarize-npm-audit.mjs "$audit_exit"',
+  ];
+  const actualAuditCommands = auditStep?.[1]?.split('\n')
+    .filter((line) => line.length > 0).map((line) => line.slice(10)) ?? [];
+  if (JSON.stringify(actualAuditCommands) !== JSON.stringify(expectedAuditCommands)) {
+    errors.push('Mandatory npm vulnerability scan shell body differs from approved commands');
   }
   return errors;
 }
