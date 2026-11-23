@@ -160,6 +160,12 @@ export function checkCiActionPins(workflow) {
   // required verification while allowing the overall job to look green.
   const allConditions = [...workflow.matchAll(/^[ \t]*if\s*:\s*([^\n]*)$/gm)]
     .map((match) => match[1].trim());
+  // YAML accepts `if :` as a mapping key too. Detect every alternate
+  // spelling before validating the sole approved audit-upload condition.
+  const conditionKeys = [...workflow.matchAll(/^[ \t]*-?[ \t]*if[ \t]*:/gm)];
+  if (conditionKeys.length !== allConditions.length) {
+    errors.push('Noncanonical or unreviewed if key detected');
+  }
   if (allConditions.length !== 1 || allConditions[0] !== 'always()' ||
       !/^[ \t]*- name: Upload sanitized npm audit summary\n[ \t]+if: always\(\)\s*$/m.test(workflow)) {
     errors.push('Only audit evidence upload may declare an if condition');
