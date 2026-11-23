@@ -389,3 +389,21 @@ text-based workflow guard rather than full YAML validation or a
 runtime sandbox. The use of `GITHUB_SHA` and other GitHub-managed
 environment variables by Node scripts does not constitute approval
 for injecting arbitrary environment values. GO-13 stays HOLD.
+
+## Git-tracked workflow allowlist
+
+The pre-install CI policy gate also enumerates the Git index using a
+NUL-delimited `git ls-files --cached -z -- .github/workflows` command
+and requires **exactly one tracked workflow**, namely
+`.github/workflows/ci.yml`. Any supplemental or renamed workflow
+(`.yml`, `.yaml`, deployment, scheduled, manual or other trigger)
+fails the gate, rather than silently escaping the restrictions enforced
+on the reviewed CI workflow. Missing or unreadable Git index data
+fails closed. Negative tests cover added workflows, missing approved
+workflow, duplicate inventory entries and malformed path inventories.
+
+Because this validator executes inside the reviewed workflow, **it
+cannot stop an added privileged workflow from starting before this
+check runs**. GitHub repository workflow permissions, rulesets,
+branch protection and independent human approval are essential
+external enforcement. GO-13 remains HOLD / authorization DENY.
