@@ -449,3 +449,17 @@ mandatory action lines.
 This is a targeted guard against alternate key spelling, not a full YAML
 parser. Other ways to alter workflow semantics still require independent
 GitHub branch protection and code review. GO-13 HOLD.
+
+## YAML condition and command key variants
+
+The CI policy gate now also rejects noncanonical YAML mapping keys
+`if :`, `if  :`, `run :` and `run  :`. Such spellings are valid
+YAML but were invisible to the earlier strict `if:` and `run:`
+scanners. The guards compare the number of all YAML-style keys
+against canonical keys before checking required conditions and
+verification commands. Regression tests cover extra hidden step and
+job conditions, hidden shell commands and edited mandatory run steps.
+
+The guard is intentionally scoped to this canonical workflow rather
+than a full YAML parser; it does not replace independent review or
+repository protection. GO-13 remains HOLD.
