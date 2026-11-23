@@ -91,3 +91,17 @@ test('blocks altered evidence retention, missing-file policy and extra upload pa
       error.includes('artifact publication')));
   }
 });
+
+test('rejects hidden run commands using YAML key spacing variants', () => {
+  const cases = [
+    approved.replace('      - name: Typecheck\n',
+      '      - name: Unreviewed shell\n        run : echo bypass\n      - name: Typecheck\n'),
+    approved.replace('    steps:\n',
+      '    steps:\n      - run : echo bypass\n'),
+    approved.replace('        run: npm test', '        run : npm test'),
+  ];
+  for (const workflow of cases) {
+    assert.ok(checkCiStepOrder(workflow).some((error) =>
+      error.includes('Noncanonical or unreviewed run key')));
+  }
+});
