@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Check pinned Actions and checkout credential policy
         run: node scripts/check-ci-action-pins.mjs
+      - name: Check required CI verification steps and order
+        run: node scripts/check-ci-step-order.mjs
       - name: Check tracked sensitive files
         run: node scripts/check-tracked-sensitive.mjs
       - name: Check declared dependency sources
