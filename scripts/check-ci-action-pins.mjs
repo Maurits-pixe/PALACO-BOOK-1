@@ -62,6 +62,18 @@ export function checkCiActionPins(workflow) {
       grantedPermissions[0] !== 'contents: read') {
     errors.push('Job-level or unexpected permissions override');
   }
+  // Require a predictable GitHub-hosted runner and bounded job runtime.
+  // This is an explicit OS release, not a pin of the runner image revision.
+  const runners = [...workflow.matchAll(/^[ \t]*runs-on:[ \t]*([^\n#]+)/gm)]
+    .map((match) => match[1].trim());
+  if (runners.length !== 1 || runners[0] !== 'ubuntu-24.04') {
+    errors.push('CI must use exactly one ubuntu-24.04 runner');
+  }
+  const timeouts = [...workflow.matchAll(/^[ \t]*timeout-minutes:[ \t]*([^\n#]+)/gm)]
+    .map((match) => match[1].trim());
+  if (timeouts.length !== 1 || timeouts[0] !== '20') {
+    errors.push('CI must have a single 20-minute timeout');
+  }
   return errors;
 }
 
