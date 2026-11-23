@@ -390,20 +390,25 @@ runtime sandbox. The use of `GITHUB_SHA` and other GitHub-managed
 environment variables by Node scripts does not constitute approval
 for injecting arbitrary environment values. GO-13 stays HOLD.
 
-## Git-tracked workflow allowlist
+## Git-tracked workflow inventory baseline
 
-The pre-install CI policy gate also enumerates the Git index using a
-NUL-delimited `git ls-files --cached -z -- .github/workflows` command
-and requires **exactly one tracked workflow**, namely
-`.github/workflows/ci.yml`. Any supplemental or renamed workflow
-(`.yml`, `.yaml`, deployment, scheduled, manual or other trigger)
-fails the gate, rather than silently escaping the restrictions enforced
-on the reviewed CI workflow. Missing or unreadable Git index data
-fails closed. Negative tests cover added workflows, missing approved
-workflow, duplicate inventory entries and malformed path inventories.
+The pre-install CI policy gate enumerates the Git index using
+`git ls-files --cached -z -- .github/workflows` and requires the **five
+already established tracked workflows** to match the reviewed inventory:
 
-Because this validator executes inside the reviewed workflow, **it
-cannot stop an added privileged workflow from starting before this
-check runs**. GitHub repository workflow permissions, rulesets,
-branch protection and independent human approval are essential
-external enforcement. GO-13 remains HOLD / authorization DENY.
+- `.github/workflows/ci.yml`
+- `.github/workflows/live-provider-conformance-launcher.yml`
+- `.github/workflows/live-provider-conformance.yml`
+- `.github/workflows/registry-contract.yml`
+- `.github/workflows/veldgids-runtime-ci.yml`
+
+Missing, renamed, duplicated or newly added workflow paths fail this
+inventory check until separately reviewed. Existing other workflows are
+**not** thereby validated against the specific restrictions of `ci.yml`;
+their code, triggers, tokens and execution privileges require a
+separate security review. This gate checks file names, not file contents.
+
+**Important:** Because this checker runs *inside* one workflow, it cannot
+prevent a newly added privileged workflow from starting before the check.
+Repository rulesets, branch protection and independent human approval
+remain mandatory. GO-13 stays HOLD / authorization DENY.
