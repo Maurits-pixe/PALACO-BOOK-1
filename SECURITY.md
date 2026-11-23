@@ -279,3 +279,21 @@ forensic evidence after a failed step. This exception does not change
 the job result or confer release authority. These are narrow
 workflow-text checks, **not** a complete GitHub Actions YAML security
 analysis. Independent reviews and GO-13 HOLD remain mandatory.
+
+## Required CI gate order and command consistency
+
+The new pre-install `scripts/check-ci-step-order.mjs` verifies that
+the required named steps appear in the approved order: source and
+dependency checks, immutable-lockfile installation, package inventory,
+typecheck, tests, build, vulnerability audit, independent evidence
+verification and review artifact uploads. It also verifies the approved
+one-line commands, requires the mandatory npm audit and sanitizer,
+and refuses extra jobs or unnamed `run:` steps.
+
+Regression tests check reordered, deleted and renamed validation gates,
+unexpected job additions and changed installation or audit commands.
+This is a **local text-based consistency check**, not a general GitHub
+Actions YAML parser; it does not prove the contents of arbitrary
+multiline scripts are benign. Because it executes within the CI
+workflow, protection of workflow changes requires external repository
+rules and independent human review. GO-13 remains HOLD.
