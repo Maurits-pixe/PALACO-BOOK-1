@@ -40,6 +40,23 @@ export function checkTrackedWorkflowPaths(paths) {
   return [];
 }
 
+// Freeze the existing four legacy workflows at the reviewed Git blob IDs.
+// This detects edits but does NOT assert the legacy workflows are secure.
+export const LEGACY_WORKFLOW_BLOBS = Object.freeze({
+  '.github/workflows/live-provider-conformance-launcher.yml': 'eeecf248f72d74706fca5408f828ceff2da851f6',
+  '.github/workflows/live-provider-conformance.yml': '40421c0686734bb7bdbccc79917c695cbbee5d80',
+  '.github/workflows/registry-contract.yml': '3784532def0cba62a4d6ba8532c517acd1865eec',
+  '.github/workflows/veldgids-runtime-ci.yml': '0131c5613a7a24721492a44d2435429db05a6bc3',
+});
+
+export function checkLegacyWorkflowBlobs(blobs) {
+  if (!blobs || typeof blobs !== 'object' || Array.isArray(blobs)) {
+    return ['Legacy workflow blob inventory is unavailable'];
+  }
+  return Object.entries(LEGACY_WORKFLOW_BLOBS).flatMap(([path, expected]) =>
+    blobs[path] === expected ? [] : [`Legacy workflow content changed: ${path}`]);
+}
+
 export function checkCiActionPins(workflow) {
   if (typeof workflow !== 'string' || !workflow.trim()) {
     return ['Missing GitHub Actions workflow'];
@@ -172,7 +189,24 @@ export function main() {
     console.error('CI action pin check FAILED: unreadable tracked workflows');
     return 2;
   }
-  const errors = [...checkCiActionPins(workflow), ...checkTrackedWorkflowPaths(trackedPaths)];
+  const blobs = {};
+  try {
+    for (const path of Object.keys(LEGACY_WORKFLOW_BLOBS)) {
+      blobs[path] = execFileSync('git', ['hash-object', '--', path], {
+        encoding: 'utf8',
+        maxBuffer: 4096,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).trim();
+    }
+  } catch {
+    console.error('CI action pin check FAILED: cannot hash legacy workflow files');
+    return 2;
+  }
+  const errors = [
+    ...checkCiActionPins(workflow),
+    ...checkTrackedWorkflowPaths(trackedPaths),
+    ...checkLegacyWorkflowBlobs(blobs),
+  ];
   for (const error of errors) console.error(`CI action pin check FAILED: ${error}`);
   if (errors.length) return 1;
   console.log('CI action pin check PASS (exact approved SHAs, expected counts, no persisted checkout token)');
