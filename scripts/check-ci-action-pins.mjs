@@ -1,9 +1,20 @@
 #!/usr/bin/env node
-// Fail closed when CI relies on mutable third-party Action references.
-// This checker is deliberately scoped to this repository's CI workflow.
+// Fail closed on unapproved external GitHub Actions, not just mutable tags.
+// This deliberately tight allowlist applies to the repository's CI workflow.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+
+export const APPROVED_ACTIONS = Object.freeze({
+  'actions/checkout': '11bd71901bbe5b1630ceea73d27597364c9af683',
+  'actions/setup-node': '49933ea5288caeca8642d1e84afbd3f7d6820020',
+  'actions/upload-artifact': 'ea165f8d65b6e75b540449e92b4886f43607fa02',
+});
+const EXPECTED_COUNTS = Object.freeze({
+  'actions/checkout': 1,
+  'actions/setup-node': 1,
+  'actions/upload-artifact': 2,
+});
 
 export function checkCiActionPins(workflow) {
   if (typeof workflow !== 'string' || !workflow.trim()) {
@@ -11,12 +22,24 @@ export function checkCiActionPins(workflow) {
   }
   const errors = [];
   const refs = [...workflow.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm)].map((match) => match[1]);
-  if (refs.length === 0) errors.push('Workflow must invoke pinned actions');
+  const counts = Object.fromEntries(Object.keys(EXPECTED_COUNTS).map((action) => [action, 0]));
+  if (refs.length === 0) errors.push('Workflow must invoke approved pinned actions');
+
   for (const ref of refs) {
-    if (!/^[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9-]*@[a-f0-9]{40}$/.test(ref)) {
-      errors.push(`Unpinned or unexpected action reference: ${ref}`);
+    const match = /^([a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9-]*)@([a-f0-9]{40})$/.exec(ref);
+    if (!match || APPROVED_ACTIONS[match[1]] !== match[2]) {
+      errors.push(`Unapproved or mutable action reference: ${ref}`);
+      continue;
+    }
+    counts[match[1]] += 1;
+  }
+  for (const [action, expected] of Object.entries(EXPECTED_COUNTS)) {
+    if (counts[action] !== expected) {
+      errors.push(`Expected ${expected} pinned uses of ${action}, got ${counts[action]}`);
     }
   }
+
+  // Keep the checkout token out of persisted git configuration.
   const checkout = workflow.match(/^\s*-\s*uses:\s*actions\/checkout@[a-f0-9]{40}[^\n]*\n\s*with:\s*\n(?:\s+[^\n]*\n)*?\s+persist-credentials:\s*false\s*$/m);
   if (!checkout) errors.push('Checkout must set persist-credentials: false');
   if (!/^permissions:\s*\n\s*contents:\s*read\s*$/m.test(workflow)) {
@@ -36,7 +59,7 @@ export function main() {
   const errors = checkCiActionPins(workflow);
   for (const error of errors) console.error(`CI action pin check FAILED: ${error}`);
   if (errors.length) return 1;
-  console.log('CI action pin check PASS (immutable action refs, no persisted checkout token)');
+  console.log('CI action pin check PASS (exact approved SHAs, expected counts, no persisted checkout token)');
   return 0;
 }
 
