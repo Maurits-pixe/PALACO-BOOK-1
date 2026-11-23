@@ -34,3 +34,35 @@ test('rejects extra jobs and unnamed shell commands', () => {
   assert.ok(checkCiStepOrder(unnamed).some((e) => e.includes('Unnamed')));
   assert.ok(checkCiStepOrder('').length);
 });
+
+test('rejects audit shell injection while retaining all expected commands', () => {
+  const injected = approved.replace(
+    '          set -e\n',
+    '          echo "bypass audit"\n          set -e\n',
+  );
+  assert.ok(checkCiStepOrder(injected).some((error) =>
+    error.includes('shell body')));
+});
+
+test('rejects reordered scanner exit handling and missing raw evidence cleanup', () => {
+  const reorder = approved.replace(
+    '          audit_exit=$?\n          set -e\n',
+    '          set -e\n          audit_exit=$?\n',
+  );
+  assert.ok(checkCiStepOrder(reorder).some((error) =>
+    error.includes('shell body')));
+  const missingTrap = approved.replace(
+    "          trap 'rm -f npm-audit.raw.json' EXIT\n", '',
+  );
+  assert.ok(checkCiStepOrder(missingTrap).some((error) =>
+    error.includes('shell body')));
+});
+
+test('rejects different audit shell, not just missing command fragments', () => {
+  const alternateShell = approved.replace(
+    '        shell: bash\n        run: |\n',
+    '        shell: sh\n        run: |\n',
+  );
+  assert.ok(checkCiStepOrder(alternateShell).some((error) =>
+    error.includes('shell body')));
+});
