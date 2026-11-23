@@ -56,8 +56,10 @@ export function checkCiActionPins(workflow) {
   // A job-level permissions override would supersede the read-only global
   // permissions declaration. Require exactly one global permissions block.
   const permissionHeaders = [...workflow.matchAll(/^[ \t]*permissions\s*:/gm)];
-  if (permissionHeaders.length !== 1 ||
-      !/^permissions:\s*\n  contents:\s*read\s*$/m.test(workflow)) {
+  const globalBlock = workflow.match(/^permissions:[^\n]*\n((?:[ \t]+[^\n]*\n)*)/m);
+  const grantedPermissions = globalBlock?.[1]?.split('\n').map((line) => line.trim()).filter(Boolean) ?? [];
+  if (permissionHeaders.length !== 1 || grantedPermissions.length !== 1 ||
+      grantedPermissions[0] !== 'contents: read') {
     errors.push('Job-level or unexpected permissions override');
   }
   return errors;
