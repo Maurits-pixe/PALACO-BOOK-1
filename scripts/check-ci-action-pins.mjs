@@ -2,6 +2,7 @@
 // Fail closed on unapproved external GitHub Actions, not just mutable tags.
 // This deliberately tight allowlist applies to the repository's CI workflow.
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -15,6 +16,20 @@ const EXPECTED_COUNTS = Object.freeze({
   'actions/setup-node': 1,
   'actions/upload-artifact': 2,
 });
+
+
+// Only the reviewed CI workflow may be tracked. An additional workflow could
+// run on privileged events without executing this workflow's policy gate.
+export function checkTrackedWorkflowPaths(paths) {
+  if (!Array.isArray(paths) || paths.some((path) => typeof path !== 'string')) {
+    return ['Could not enumerate tracked GitHub workflow paths'];
+  }
+  const workflows = paths.filter((path) => path.startsWith('.github/workflows/'));
+  if (workflows.length !== 1 || workflows[0] !== '.github/workflows/ci.yml') {
+    return ['Unreviewed GitHub workflows detected: require only .github/workflows/ci.yml'];
+  }
+  return [];
+}
 
 export function checkCiActionPins(workflow) {
   if (typeof workflow !== 'string' || !workflow.trim()) {
@@ -136,7 +151,19 @@ export function main() {
     console.error('CI action pin check FAILED: unreadable workflow');
     return 2;
   }
-  const errors = checkCiActionPins(workflow);
+  let trackedPaths;
+  try {
+    const output = execFileSync('git', ['ls-files', '--cached', '-z', '--', '.github/workflows'], {
+      encoding: 'utf8',
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    trackedPaths = output.split('\\0').filter(Boolean);
+  } catch {
+    console.error('CI action pin check FAILED: unreadable tracked workflows');
+    return 2;
+  }
+  const errors = [...checkCiActionPins(workflow), ...checkTrackedWorkflowPaths(trackedPaths)];
   for (const error of errors) console.error(`CI action pin check FAILED: ${error}`);
   if (errors.length) return 1;
   console.log('CI action pin check PASS (exact approved SHAs, expected counts, no persisted checkout token)');
