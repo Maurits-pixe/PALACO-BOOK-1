@@ -24,7 +24,8 @@ jobs:
           node-version: 22
       - name: Upload inventory
         uses: actions/upload-artifact@${upload} # approved
-      - name: Upload audit
+      - name: Upload sanitized npm audit summary
+        if: always()
         uses: actions/upload-artifact@${upload} # approved
 `;
 
@@ -40,7 +41,8 @@ test('rejects even pinned Actions from unapproved repositories', () => {
     .some((error) => error.includes('Unapproved')));
 });
 test('detects missing, duplicated or replaced mandatory Actions', () => {
-  assert.ok(checkCiActionPins(good.replace(`      - name: Upload audit
+  assert.ok(checkCiActionPins(good.replace(`      - name: Upload sanitized npm audit summary
+        if: always()
         uses: actions/upload-artifact@${upload} # approved
 `, '')).some((error) => error.includes('Expected 2')));
   assert.ok(checkCiActionPins(good + `      - uses: actions/upload-artifact@${upload}\n`)
@@ -101,4 +103,22 @@ test('requires exactly one bounded 20-minute CI job timeout', () => {
     .some((error) => error.includes('20-minute timeout')));
   assert.ok(checkCiActionPins(good + '      timeout-minutes: 120\n')
     .some((error) => error.includes('20-minute timeout')));
+});
+
+test('fails closed on continue-on-error even when set to false', () => {
+  for (const value of ['true', 'false', '${{ true }}']) {
+    const changed = good.replace('        with:\n          node-version: 22',
+      `        continue-on-error: ${value}\n        with:\n          node-version: 22`);
+    assert.ok(checkCiActionPins(changed)
+      .some((error) => error.includes('continue-on-error')));
+  }
+});
+
+test('allows unconditional audit artifact upload only, not bypassed checks', () => {
+  assert.deepEqual(checkCiActionPins(good), []);
+  const bypass = good.replace('        with:\n          node-version: 22',
+    '        if: always()\n        with:\n          node-version: 22');
+  assert.ok(checkCiActionPins(bypass).some((error) => error.includes('Only audit evidence')));
+  const removed = good.replace('        if: always()\n', '');
+  assert.ok(checkCiActionPins(removed).some((error) => error.includes('Only audit evidence')));
 });
