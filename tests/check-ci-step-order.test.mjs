@@ -66,3 +66,28 @@ test('rejects different audit shell, not just missing command fragments', () => 
   assert.ok(checkCiStepOrder(alternateShell).some((error) =>
     error.includes('shell body')));
 });
+
+test('accepts only the reviewed sanitized artifact file paths', () => {
+  assert.deepEqual(checkCiStepOrder(approved), []);
+  for (const changed of [
+    approved.replace('path: npm-dependency-inventory.json', 'path: .'),
+    approved.replace('path: npm-audit-summary.json', 'path: npm-audit.raw.json'),
+    approved.replace('name: npm-audit-summary\n', 'name: unreviewed-audit\n'),
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((error) =>
+      error.includes('artifact publication')));
+  }
+});
+
+test('blocks altered evidence retention, missing-file policy and extra upload parameters', () => {
+  for (const changed of [
+    approved.replace('retention-days: 7', 'retention-days: 90'),
+    approved.replace('if-no-files-found: error', 'if-no-files-found: warn'),
+    approved.replace('if-no-files-found: warn', 'if-no-files-found: ignore'),
+    approved.replace('          name: npm-audit-summary', '          overwrite: true\n          name: npm-audit-summary'),
+    approved + '      - name: Surprise\n        run: echo bad\n',
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((error) =>
+      error.includes('artifact publication')));
+  }
+});
