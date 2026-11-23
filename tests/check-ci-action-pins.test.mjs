@@ -193,3 +193,31 @@ test('rejects job-level concurrency override or duplicate top-level block', () =
   assert.ok(checkCiActionPins(duplicate).some((error) =>
     error.includes('concurrency group')));
 });
+
+test('rejects injected workflow, job and step environments or secret maps', () => {
+  const cases = [
+    good.replace('jobs:\n', 'env:\n  NODE_OPTIONS: --require ./untrusted.cjs\njobs:\n'),
+    good.replace('  verify:\n', '  verify:\n    environment: production\n'),
+    good.replace('  verify:\n', '  verify:\n    secrets:\n      token: unexpected\n'),
+    good.replace('        with:\n          node-version: 22', '        env:\n          NODE_OPTIONS: unsafe\n        with:\n          node-version: 22'),
+  ];
+  for (const workflow of cases) {
+    assert.ok(checkCiActionPins(workflow).some((error) =>
+      error.includes('Unreviewed CI execution context')));
+  }
+});
+
+test('rejects unreviewed container, service, matrix and default execution contexts', () => {
+  const cases = [
+    '    container: node:22\n',
+    '    services:\n      database:\n        image: postgres:latest\n',
+    '    strategy:\n      matrix:\n        node: [20, 22]\n',
+    '    defaults:\n      run:\n        shell: bash\n',
+  ];
+  for (const inserted of cases) {
+    const changed = good.replace('    runs-on: ubuntu-24.04\n',
+      inserted + '    runs-on: ubuntu-24.04\n');
+    assert.ok(checkCiActionPins(changed).some((error) =>
+      error.includes('Unreviewed CI execution context')), inserted);
+  }
+});
