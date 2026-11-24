@@ -111,6 +111,15 @@ export function checkCiActionPins(workflow) {
   if (actionKeys.length !== refs.length) {
     errors.push('Noncanonical or unreviewed uses key detected');
   }
+  // Every approved external Action has exactly one reviewed input map.
+  // Duplicate `with` blocks or YAML whitespace variants may change action
+  // inputs without altering their approved uses: SHA or canonical setup.
+  const withKeys = [...workflow.matchAll(/^[ \t]*-?[ \t]*with[ \t]*:/gm)];
+  const canonicalWithKeys = [...workflow.matchAll(/^        with:$/gm)];
+  if (withKeys.length !== refs.length ||
+      canonicalWithKeys.length !== refs.length) {
+    errors.push('Action input maps must be canonical and exactly one per Action');
+  }
   const counts = Object.fromEntries(Object.keys(EXPECTED_COUNTS).map((action) => [action, 0]));
   if (refs.length === 0) errors.push('Workflow must invoke approved pinned actions');
 
