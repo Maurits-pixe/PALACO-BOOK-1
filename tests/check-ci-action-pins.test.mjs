@@ -405,3 +405,30 @@ test('rejects tab indentation hidden inside the reviewed workflow', () => {
   assert.equal(checkCiActionPins(good).some((error) =>
     error.includes('Unreviewed YAML document boundary')), false);
 });
+
+test('blocks unreviewed job dependencies and job output mappings', () => {
+  for (const added of [
+    '    needs: privileged\n',
+    '    outputs:\n      token: secret\n',
+    "    'needs': privileged\n",
+    '    outputs : {}\n',
+  ]) {
+    const changed = good.replace('    steps:\n', added + '    steps:\n');
+    assert.ok(checkCiActionPins(changed).some((error) =>
+      error.includes('Unreviewed CI job or step dataflow key')), added);
+  }
+});
+
+test('blocks step IDs and output references that alter evidence dataflow', () => {
+  for (const added of [
+    '        id: injected\n',
+    '        id : injected\n',
+    '        "id": injected\n',
+    "        'outputs': {}\n",
+  ]) {
+    const changed = good.replace('      - name: Upload inventory\n',
+      '      - name: Upload inventory\n' + added);
+    assert.ok(checkCiActionPins(changed).some((error) =>
+      error.includes('Unreviewed CI job or step dataflow key')), added);
+  }
+});
