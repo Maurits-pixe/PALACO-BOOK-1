@@ -463,3 +463,19 @@ job conditions, hidden shell commands and edited mandatory run steps.
 The guard is intentionally scoped to this canonical workflow rather
 than a full YAML parser; it does not replace independent review or
 repository protection. GO-13 remains HOLD.
+
+## Fixed shell and working-directory execution context
+
+The CI step-order validator now permits exactly one explicit
+`shell: bash` declaration, within the approved npm-audit step, and
+rejects any additional shell declaration (including `shell :` or
+alternative shells). The validator also prohibits all step-level
+`working-directory` overrides, including YAML whitespace variants.
+These settings otherwise allow unchanged-looking `run:` commands to
+execute in an unreviewed environment or directory. The existing
+job/workflow `defaults` prohibition remains in force.
+
+Regression tests cover unreviewed shells, altered audit shell keys,
+missing audit shell declarations and redirected test execution. This
+is an in-workflow textual guard, not independent workflow attestation.
+GO-13 remains HOLD / DENY.
