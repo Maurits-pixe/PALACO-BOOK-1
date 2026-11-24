@@ -326,3 +326,31 @@ test('rejects deleted or reordered top-level workflow policy sections', () => {
   assert.ok(checkCiActionPins(reordered).some((error) =>
     error.includes('CI root keys differ')));
 });
+
+test('rejects quoted YAML action and condition keys hidden from plain-key scanners', () => {
+  for (const [key, value] of [
+    ["'uses'", 'untrusted/action@v1'],
+    ['"uses"', './local-action'],
+    ["'if'", 'false'],
+    ['"if"', 'always()'],
+    ["'run'", 'echo bypass'],
+  ]) {
+    const workflow = good.replace('      - name: Upload inventory\n',
+      `      - ${key}: ${value}\n      - name: Upload inventory\n`);
+    assert.ok(checkCiActionPins(workflow).some((error) =>
+      error.includes('Quoted CI security key')), key);
+  }
+});
+
+test('rejects quoted YAML privilege, execution and error suppression keys', () => {
+  for (const key of [
+    "'continue-on-error'", '"permissions"', "'env'", '"environment"',
+    "'secrets'", '"container"', "'strategy'", '"shell"',
+    "'working-directory'", '"timeout-minutes"',
+  ]) {
+    const workflow = good.replace('    steps:\n',
+      `    ${key}: true\n    steps:\n`);
+    assert.ok(checkCiActionPins(workflow).some((error) =>
+      error.includes('Quoted CI security key')), key);
+  }
+});
