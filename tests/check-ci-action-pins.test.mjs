@@ -486,3 +486,24 @@ test('rejects timeout overrides hidden by YAML whitespace before colon', () => {
       e.includes('Noncanonical or duplicate CI timeout-minutes key')), changed);
   }
 });
+
+test('rejects BOM, CRLF and CR-only workflow encoding variants', () => {
+  for (const changed of [
+    '\uFEFF' + good,
+    good.replaceAll('\n', '\r\n'),
+    good.replaceAll('\n', '\r'),
+  ]) {
+    assert.ok(checkCiActionPins(changed).some((e) =>
+      e.includes('noncanonical control character')));
+  }
+});
+
+test('rejects invisible control bytes inserted into YAML mapping lines', () => {
+  for (const control of ['\u0000', '\u0008', '\u000c', '\u001b', '\u007f']) {
+    const changed = good.replace('    steps:', '    steps:' + control);
+    assert.ok(checkCiActionPins(changed).some((e) =>
+      e.includes('noncanonical control character')));
+  }
+  assert.equal(checkCiActionPins(good).some((e) =>
+    e.includes('noncanonical control character')), false);
+});
