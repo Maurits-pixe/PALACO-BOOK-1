@@ -681,3 +681,14 @@ reviewed setup-input sequence check continues to protect both setup Actions.
 A negative performance regression fixture checks a large malformed input.
 This is a targeted mitigation, not a guarantee against all ReDoS elsewhere.
 Full CI remains mandatory, and GO-13 remains HOLD / DENY.
+
+## CI #739 negative fixture correction (phase 60)
+
+CI #739 **FAILED** in `check-ci-action-pins.test.mjs`: 46 of 47 cases
+passed, with the explicit YAML mapping-key regression failing. Investigation
+found that three fixture strings encoded literal `\\n` sequences instead
+of JavaScript newline escapes `\n`; thus the inputs did not contain the
+intended `? key` YAML lines. The test fixtures have been corrected without
+weakening the existing explicit-key indicator guard. The failed CI run
+remains failed, and the new HEAD requires complete independent CI
+verification. GO-13 remains DRAFT / HOLD / DENY.
