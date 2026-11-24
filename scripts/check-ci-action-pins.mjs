@@ -198,6 +198,20 @@ export function checkCiActionPins(workflow) {
   if (timeouts.length !== 1 || timeouts[0] !== '20') {
     errors.push('CI must have a single 20-minute timeout');
   }
+  // A second YAML mapping with spaces before its colon can override the
+  // reviewed runner or timeout while avoiding the canonical value regex.
+  // Require one key of each kind and no alternate key spellings.
+  for (const [key, canonicalCount] of [
+    ['runs-on', runners.length],
+    ['timeout-minutes', timeouts.length],
+  ]) {
+    const variants = [...workflow.matchAll(
+      new RegExp('^[ \t]*' + key + '[ \t]*:', 'gm'),
+    )];
+    if (variants.length !== canonicalCount) {
+      errors.push('Noncanonical or duplicate CI ' + key + ' key detected');
+    }
+  }
   // Never mask a failed verification step or job with continue-on-error.
   // The only intentionally unconditional step is sanitized audit artifact
   // collection, not a bypass of any verification gate.
