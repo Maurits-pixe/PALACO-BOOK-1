@@ -65,7 +65,7 @@ export function checkCiActionPins(workflow) {
   // Refuse alternate root-level keys, duplicates and reordered policy
   // sections. A changed root key could alter workflow behavior without
   // changing any approved action or verification step.
-  const topLevelKeys = [...workflow.matchAll(/^([A-Za-z][A-Za-z0-9_-]*)[ \t]*:/gm)]
+  const topLevelKeys = [...workflow.matchAll(/^([A-Za-z][A-Za-z0-9_-]*):/gm)]
     .map((match) => match[1]);
   const expectedTopLevelKeys = ['name', 'on', 'permissions', 'concurrency', 'jobs'];
   if (JSON.stringify(topLevelKeys) !== JSON.stringify(expectedTopLevelKeys)) {
