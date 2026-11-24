@@ -82,7 +82,7 @@ export function checkCiActionPins(workflow) {
   // YAML permits explicit mapping keys, e.g. "? uses" followed by ": action".
   // They can alter mapping semantics without matching canonical key scanners.
   // The reviewed workflow does not use explicit-key indicator lines.
-  if (/^[ ]*\\?(?:[ ]|$)/gm.test(workflow)) {
+  if (/^[ ]*\?(?:[ ]|$)/gm.test(workflow)) {
     errors.push('Unreviewed YAML explicit mapping key indicator');
   }
   // Refuse alternate root-level keys, duplicates and reordered policy
