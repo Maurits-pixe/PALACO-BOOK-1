@@ -379,3 +379,29 @@ test('rejects YAML mapping merges and permits ordinary ampersands in quoted valu
   assert.equal(checkCiActionPins(good)
     .some((error) => error.includes('YAML anchors, aliases or merge keys')), false);
 });
+
+test('rejects extra YAML document boundaries and directives', () => {
+  for (const changed of [
+    '---\n' + good,
+    good + '...\n',
+    good + '--- # additional YAML document\n',
+    '%YAML 1.2\n' + good,
+    '%TAG !repo! tag:example.com,2026:workflow/\n' + good,
+  ]) {
+    assert.ok(checkCiActionPins(changed).some((error) =>
+      error.includes('Unreviewed YAML document boundary')), changed);
+  }
+});
+
+test('rejects tab indentation hidden inside the reviewed workflow', () => {
+  for (const changed of [
+    good.replace('    steps:\n', '\tsteps:\n'),
+    good.replace('    steps:\n', '  \tsteps:\n'),
+    good.replace('    steps:\n', '    \tif: false\n    steps:\n'),
+  ]) {
+    assert.ok(checkCiActionPins(changed).some((error) =>
+      error.includes('Unreviewed YAML document boundary')));
+  }
+  assert.equal(checkCiActionPins(good).some((error) =>
+    error.includes('Unreviewed YAML document boundary')), false);
+});
