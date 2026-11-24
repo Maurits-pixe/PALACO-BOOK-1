@@ -569,3 +569,18 @@ Two negative regression scenarios exercise job-level `needs` and
 `outputs` as well as injected step IDs and output mappings. This
 is an internal textual policy guard, not a full YAML parser or an
 independent branch protection rule. GO-13 remains HOLD / DENY.
+
+## Exactly one Action input mapping
+
+The central CI workflow now requires a single canonical `with:` input
+mapping for each of the four approved external Action invocations:
+checkout, Node setup and the two evidence uploads. An added duplicate,
+missing mapping, quoted `"with":` or whitespace-variant `with :`
+fails the pre-install gate. This closes a configuration-drift path in
+which the approved Action SHA remains unchanged but its effective
+inputs may be shadowed or replaced.
+
+Negative regression tests cover duplicate and missing maps, plus
+alternate key spellings. The gate does not parse YAML into a semantic
+tree and cannot replace independent code review, required checks or
+GitHub repository protections. GO-13 HOLD / DENY.
