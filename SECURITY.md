@@ -647,3 +647,25 @@ requires ordinary blank lines and comments to pass, while the earlier
 negative fixtures continue to require explicit mapping keys to fail.
 A failure is not evidence of a passing build; rerun verification is
 mandatory. GO-13 HOLD / DENY.
+
+## Bounded per-file CI test execution (phase 58)
+
+CI #727 passed its initial policy and dependency checks but was cancelled at
+the 20-minute job timeout while running the combined `npm test` command.
+The GitHub log showed only the first three test cases before the timeout;
+it did not identify the stalled test worker. This is **not** a passing CI run.
+
+The `npm test` entry now invokes `scripts/run-tests-bounded.mjs`, which
+discovers all existing `tests/*.test.mjs` and `tests/*.test.ts` files,
+requires both suites, sorts the filenames, and executes each file
+independently with a 90-second limit. It logs each file before execution
+and fails the entire job on nonzero exit, signal, timeout or spawn error.
+No file is silently skipped, retried, or marked as passing after a
+timeout. TypeScript tests run via Node with the installed `tsx` import hook.
+The root CI job still retains its existing 20-minute overall timeout.
+
+This change improves fault localization and bounds individual test files,
+but it does **not** prove that all tests will finish within the overall
+job limit or that a timed-out child process has no descendants. Reviewers
+must inspect the new GitHub Actions run and resolve any failing test.
+GO-13 remains DRAFT / HOLD / DENY.
