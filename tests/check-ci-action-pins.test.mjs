@@ -514,7 +514,7 @@ test('rejects quoted Action input mapping keys, including shadow maps', () => {
   for (const key of ["'with':", '"with":']) {
     const shadow = good.replace(
       '          persist-credentials: false',
-      '          persist-credentials: false\\n        ' + key + '\\n          persist-credentials: true',
+      '          persist-credentials: false\n        ' + key + '\n          persist-credentials: true',
     );
     assert.ok(checkCiActionPins(shadow).some((error) => error.includes('Quoted CI security key')), key);
     const replacement = good.replace('        with:', '        ' + key);
