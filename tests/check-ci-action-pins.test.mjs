@@ -354,3 +354,28 @@ test('rejects quoted YAML privilege, execution and error suppression keys', () =
       error.includes('Quoted CI security key')), key);
   }
 });
+
+test('rejects YAML anchors and aliases in security-sensitive workflow mappings', () => {
+  const cases = [
+    good.replace('    steps:\n', '    security: &injected\n    steps:\n'),
+    good.replace('    steps:\n', '    security: *injected\n    steps:\n'),
+    good.replace('    steps:\n', "    'security': &injected\n    steps:\n"),
+    good.replace('    steps:\n', '    security : *injected # reuses hidden value\n    steps:\n'),
+  ];
+  for (const workflow of cases) {
+    assert.ok(checkCiActionPins(workflow).some((error) =>
+      error.includes('YAML anchors, aliases or merge keys')), workflow);
+  }
+});
+
+test('rejects YAML mapping merges and permits ordinary ampersands in quoted values', () => {
+  for (const workflow of [
+    good.replace('    steps:\n', '    <<: *unsafe_config\n    steps:\n'),
+    good.replace('    steps:\n', '    << : *unsafe_config\n    steps:\n'),
+  ]) {
+    assert.ok(checkCiActionPins(workflow).some((error) =>
+      error.includes('YAML anchors, aliases or merge keys')));
+  }
+  assert.equal(checkCiActionPins(good)
+    .some((error) => error.includes('YAML anchors, aliases or merge keys')), false);
+});
