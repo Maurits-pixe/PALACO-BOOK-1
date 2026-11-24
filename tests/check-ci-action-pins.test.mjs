@@ -302,3 +302,27 @@ test('blocks alternative YAML if keys that hide conditional bypasses', () => {
       error.includes('Noncanonical or unreviewed if key')));
   }
 });
+
+test('rejects extra root-level workflow settings without changing approved steps', () => {
+  for (const modified of [
+    good.replace('jobs:\n', 'run-name: unchecked\njobs:\n'),
+    good.replace('jobs:\n', 'workflow_call: {}\njobs:\n'),
+    good.replace('jobs:\n', 'permissions:\n  contents: write\njobs:\n'),
+    good.replace('name: CI\n', 'name: CI\nname: Second CI\n'),
+    good.replace('name: CI\n', 'name : CI\n'),
+  ]) {
+    assert.ok(checkCiActionPins(modified).some((error) =>
+      error.includes('CI root keys differ')), modified);
+  }
+});
+
+test('rejects deleted or reordered top-level workflow policy sections', () => {
+  const changed = good.replace(
+    'permissions:\n  contents: read\nconcurrency:',
+    'concurrency:');
+  assert.ok(checkCiActionPins(changed).some((error) =>
+    error.includes('CI root keys differ')));
+  const reordered = good.replace('name: CI\non:', 'on:');
+  assert.ok(checkCiActionPins(reordered).some((error) =>
+    error.includes('CI root keys differ')));
+});
