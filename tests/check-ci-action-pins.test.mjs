@@ -521,3 +521,18 @@ test('rejects quoted Action input mapping keys, including shadow maps', () => {
     assert.ok(checkCiActionPins(replacement).some((error) => error.includes('Quoted CI security key')), key);
   }
 });
+
+// YAML explicit-key indicators are another way to spell a mapping key.
+test('rejects explicit YAML mapping keys in job and action configuration', () => {
+  for (const changed of [
+    good.replace('    runs-on: ubuntu-24.04',
+      '    ? runs-on\\n    : self-hosted\\n    runs-on: ubuntu-24.04'),
+    good.replace('        with:\\n          node-version: 22',
+      '        ? with\\n        : { node-version: 99 }\\n        with:\\n          node-version: 22'),
+    good.replace('jobs:\\n', '? jobs\\n: {}\\njobs:\\n'),
+  ]) {
+    assert.ok(checkCiActionPins(changed).some((error) =>
+      error.includes('explicit mapping key indicator')));
+  }
+  assert.deepEqual(checkCiActionPins(good), []);
+});
