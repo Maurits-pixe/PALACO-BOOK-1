@@ -211,6 +211,15 @@ export function checkCiActionPins(workflow) {
       !/^[ \t]*- name: Upload sanitized npm audit summary\n[ \t]+if: always\(\)\s*$/m.test(workflow)) {
     errors.push('Only audit evidence upload may declare an if condition');
   }
+  // The verification job has no outputs, dependencies, or named step IDs.
+  // These add cross-job dataflow or indirect references not covered by the
+  // reviewed single-job, fixed-command policy.
+  const indirectKeys = [...workflow.matchAll(
+    /^[ \t]*-?[ \t]*(?:['"])?(id|outputs|needs)(?:['"])?[ \t]*:/gm,
+  )].map((match) => match[1]);
+  if (indirectKeys.length > 0) {
+    errors.push('Unreviewed CI job or step dataflow key: ' + indirectKeys.join(', '));
+  }
   // Disallow unreviewed execution context that can bypass the existing
   // deterministic single-job verification, inject credentials or launch
   // containers/services. This deliberately does not parse arbitrary YAML.
