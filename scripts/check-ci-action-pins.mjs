@@ -150,7 +150,7 @@ export function checkCiActionPins(workflow) {
   }
 
   // Keep the checkout token out of persisted git configuration.
-  const checkout = workflow.match(/^\s*-\s*uses:\s*actions\/checkout@[a-f0-9]{40}[^\n]*\n\s*with:\s*\n(?:\s+[^\n]*\n)*?\s+persist-credentials:\s*false\s*$/m);
+  const checkout = /^      - uses: actions\/checkout@[a-f0-9]{40}[^\n]*\n        with:\n          persist-credentials: false$/m.test(workflow);
   if (!checkout) errors.push('Checkout must set persist-credentials: false');
 
   // Enforce the entire reviewed input configuration for both setup actions.
