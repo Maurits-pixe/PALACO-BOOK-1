@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs && tsx --test tests/*.test.ts",
+    "test": "node scripts/run-tests-bounded.mjs",
     "live:provider-conformance": "tsx scripts/live-provider-conformance.ts",
     "live:provider-result": "tsx scripts/evaluate-live-provider-result.ts"
   },
