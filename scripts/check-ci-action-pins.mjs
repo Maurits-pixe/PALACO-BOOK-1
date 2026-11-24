@@ -79,6 +79,12 @@ export function checkCiActionPins(workflow) {
   if (documentControls.length || directives.length || tabIndentation.length) {
     errors.push('Unreviewed YAML document boundary, directive or tab indentation');
   }
+  // YAML permits explicit mapping keys, e.g. "? uses" followed by ": action".
+  // They can alter mapping semantics without matching canonical key scanners.
+  // The reviewed workflow does not use explicit-key indicator lines.
+  if (/^[ ]*\\?(?:[ ]|$)/gm.test(workflow)) {
+    errors.push('Unreviewed YAML explicit mapping key indicator');
+  }
   // Refuse alternate root-level keys, duplicates and reordered policy
   // sections. A changed root key could alter workflow behavior without
   // changing any approved action or verification step.
