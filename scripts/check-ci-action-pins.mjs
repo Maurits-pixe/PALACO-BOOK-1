@@ -158,7 +158,7 @@ export function checkCiActionPins(workflow) {
   // Reject ALL additional conditional steps, not just additional always()
   // expressions. A condition such as "if: false" could silently bypass a
   // required verification while allowing the overall job to look green.
-  const allConditions = [...workflow.matchAll(/^[ \t]*if\s*:\s*([^\n]*)$/gm)]
+  const allConditions = [...workflow.matchAll(/^[ \t]*if:\s*([^\n]*)$/gm)]
     .map((match) => match[1].trim());
   // YAML accepts `if :` as a mapping key too. Detect every alternate
   // spelling before validating the sole approved audit-upload condition.
