@@ -494,3 +494,19 @@ This control constrains only the textual root structure of the
 reviewed `ci.yml`; it is not an independent YAML parser or a
 replacement for GitHub branch protections and workflow review.
 GO-13 remains HOLD / DENY.
+
+## Quoted YAML security keys
+
+YAML allows quoted mapping keys such as `'uses':`, `"if":`,
+`'continue-on-error':` and `"permissions":`. The canonical CI
+policy checks previously examined plain key spellings and could miss
+such equivalent keys. The pinned-action preflight now rejects quoted
+forms of action, condition, execution, credential, privilege and
+error-suppression keys before dependency installation. Negative
+regression tests cover quoted local/external actions, hidden step
+conditions, shell commands, secrets and execution overrides.
+
+This guard operates on the committed workflow text; it does not
+provide complete YAML parsing or independent policy enforcement.
+Legacy workflows are subject to content-drift checks only and
+continue to require their own security review. GO-13 HOLD / DENY.
