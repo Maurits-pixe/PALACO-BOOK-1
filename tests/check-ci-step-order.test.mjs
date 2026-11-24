@@ -130,3 +130,28 @@ test('rejects workdir overrides that redirect approved verification commands', (
       e.includes('working-directory override')));
   }
 });
+
+test('rejects noncanonical and duplicate step name keys', () => {
+  for (const changed of [
+    approved.replace('      - name: Typecheck', '      - name : Typecheck'),
+    approved.replace('      - name: Typecheck',
+      '      - name : Hidden step\n      - name: Typecheck'),
+    approved.replace('      - name: Typecheck',
+      '      - name: Extra step\n      - name: Typecheck'),
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((e) =>
+      e.includes('step name key')), changed);
+  }
+});
+
+test('rejects duplicate, renamed or whitespace-variant steps mappings', () => {
+  for (const changed of [
+    approved.replace('    steps:\n', '    steps :\n'),
+    approved.replace('    steps:\n', '    steps:\n    steps:\n'),
+    approved.replace('    steps:\n', '    other: true\n    steps :\n    steps:\n'),
+    approved.replace('    steps:\n', ''),
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((e) =>
+      e.includes('canonical steps mapping')), changed);
+  }
+});
