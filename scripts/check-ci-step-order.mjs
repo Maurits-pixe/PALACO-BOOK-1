@@ -103,6 +103,18 @@ export function checkCiStepOrder(workflow) {
   if (JSON.stringify(actualAuditCommands) !== JSON.stringify(expectedAuditCommands)) {
     errors.push('Mandatory npm vulnerability scan shell body differs from approved commands');
   }
+  // Only the audit step may override its shell. Unreviewed shell or
+  // working-directory keys can change how apparently approved run lines
+  // execute without changing their textual commands.
+  const shellKeys = [...workflow.matchAll(/^[ \t]*-?[ \t]*shell[ \t]*:/gm)];
+  const canonicalAuditShell = [...workflow.matchAll(/^        shell: bash$/gm)];
+  if (shellKeys.length !== 1 || canonicalAuditShell.length !== 1) {
+    errors.push('Only the audit step may use the reviewed bash shell override');
+  }
+  const workdirKeys = [...workflow.matchAll(/^[ \t]*-?[ \t]*working-directory[ \t]*:/gm)];
+  if (workdirKeys.length > 0) {
+    errors.push('Unreviewed working-directory override detected');
+  }
   // Publication must use the exact reviewed sanitized files. Comparing the
   // entire final step blocks rejects altered names, globs, unknown settings,
   // retention changes, upload permissions and any trailing extra steps.
