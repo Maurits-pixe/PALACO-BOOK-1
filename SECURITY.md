@@ -479,3 +479,18 @@ Regression tests cover unreviewed shells, altered audit shell keys,
 missing audit shell declarations and redirected test execution. This
 is an in-workflow textual guard, not independent workflow attestation.
 GO-13 remains HOLD / DENY.
+
+## Approved CI root structure
+
+The main CI workflow must have exactly these five top-level YAML keys,
+in reviewed order: `name`, `on`, `permissions`,
+`concurrency`, and `jobs`. The policy gate rejects unexpected,
+duplicated, removed, reordered or whitespace-variant root keys. This
+prevents silently introducing root-level workflow features or
+overriding the existing reviewed structure. Regression tests exercise
+extra `run-name`, duplicate root blocks and altered spelling.
+
+This control constrains only the textual root structure of the
+reviewed `ci.yml`; it is not an independent YAML parser or a
+replacement for GitHub branch protections and workflow review.
+GO-13 remains HOLD / DENY.
