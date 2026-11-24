@@ -62,6 +62,17 @@ export function checkCiActionPins(workflow) {
     return ['Missing GitHub Actions workflow'];
   }
   const errors = [];
+  // This policy covers one plain YAML document. Multiple documents,
+  // directives and tab-indented mappings are outside the reviewed CI
+  // grammar and must not be interpreted as additional instructions.
+  const documentControls = [...workflow.matchAll(
+    /^(?:---|\.\.\.)(?:[ \t]*(?:#.*)?)?$/gm,
+  )];
+  const directives = [...workflow.matchAll(/^%(?:YAML|TAG)(?:[ \t]|$)/gm)];
+  const tabIndentation = [...workflow.matchAll(/^[ \t]*\t[ \t]*\S/gm)];
+  if (documentControls.length || directives.length || tabIndentation.length) {
+    errors.push('Unreviewed YAML document boundary, directive or tab indentation');
+  }
   // Refuse alternate root-level keys, duplicates and reordered policy
   // sections. A changed root key could alter workflow behavior without
   // changing any approved action or verification step.
