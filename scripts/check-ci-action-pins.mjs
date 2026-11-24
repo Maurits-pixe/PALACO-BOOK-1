@@ -62,6 +62,12 @@ export function checkCiActionPins(workflow) {
     return ['Missing GitHub Actions workflow'];
   }
   const errors = [];
+  // The approved workflow is plain UTF-8 text with LF line endings.
+  // Reject BOMs and hidden controls before applying line-based validators.
+  // CRLF and CR-only lines must not change how keys or commands match.
+  if (workflow.charCodeAt(0) === 0xfeff || /[\r\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(workflow)) {
+    errors.push('CI workflow contains a BOM or noncanonical control character');
+  }
   // This policy covers one plain YAML document. Multiple documents,
   // directives and tab-indented mappings are outside the reviewed CI
   // grammar and must not be interpreted as additional instructions.
