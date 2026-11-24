@@ -624,3 +624,15 @@ cover both single- and double-quoted replacements and duplicate maps.
 
 This remains an in-workflow text guard, not a semantic YAML parser or an
 independent protection against workflow edits. GO-13 HOLD / DENY.
+
+## YAML explicit mapping keys
+
+The CI Action-policy preflight now rejects explicit YAML mapping-key
+indicators (lines beginning with `?` followed by a space or end of line).
+Explicit keys can encode effective fields such as `uses`, `with`,
+`runs-on` or `jobs` without matching canonical mapping-key scans.
+The reviewed CI workflow has no such indicators. Negative regression
+fixtures cover explicit keys at workflow, job and Action-input levels.
+
+This is a conservative textual guard and does not provide full semantic
+YAML verification or independent repository protection. GO-13 HOLD / DENY.
