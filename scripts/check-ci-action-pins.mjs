@@ -71,6 +71,15 @@ export function checkCiActionPins(workflow) {
   if (JSON.stringify(topLevelKeys) !== JSON.stringify(expectedTopLevelKeys)) {
     errors.push('CI root keys differ from the reviewed workflow structure');
   }
+  // YAML quoted mapping keys can carry the same meaning as plain keys.
+  // Do not let `'uses':`, `"if":`, or quoted privilege fields bypass
+  // the canonical key scanners on which the CI gates rely.
+  const quotedSecurityKeys = [...workflow.matchAll(
+    /^[ \t]*-?[ \t]*(['"])(uses|if|run|permissions|continue-on-error|env|environment|secrets|container|services|strategy|defaults|shell|working-directory|runs-on|timeout-minutes)\1[ \t]*:/gm,
+  )].map((match) => match[2]);
+  if (quotedSecurityKeys.length > 0) {
+    errors.push('Quoted CI security key detected: ' + quotedSecurityKeys.join(', '));
+  }
   const refs = [...workflow.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm)].map((match) => match[1]);
   // A YAML key may legally contain whitespace before ':'. The canonical
   // uses: regex above intentionally enforces one spelling; now reject every
