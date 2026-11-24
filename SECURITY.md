@@ -612,3 +612,15 @@ and embedded controls, while preserving the approved LF-only workflow.
 This does not establish an independent attestation of the workflow
 bytes or replace semantic YAML review and repository protections.
 GO-13 remains HOLD / DENY.
+
+## Quoted Action input map shadowing
+
+The central CI policy now explicitly rejects quoted YAML `with` keys,
+including a second quoted `with` mapping next to a canonical Action input
+map. YAML treats quoted and unquoted mapping keys as equivalent, so a
+shadow map could change checkout credential persistence or other pinned
+Action parameters despite unchanged Action references. Negative tests
+cover both single- and double-quoted replacements and duplicate maps.
+
+This remains an in-workflow text guard, not a semantic YAML parser or an
+independent protection against workflow edits. GO-13 HOLD / DENY.
