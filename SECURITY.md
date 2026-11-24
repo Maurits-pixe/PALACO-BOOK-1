@@ -584,3 +584,17 @@ Negative regression tests cover duplicate and missing maps, plus
 alternate key spellings. The gate does not parse YAML into a semantic
 tree and cannot replace independent code review, required checks or
 GitHub repository protections. GO-13 HOLD / DENY.
+
+## Canonical runner and timeout keys
+
+The main CI job must retain one `runs-on: ubuntu-24.04` and one
+`timeout-minutes: 20` mapping. In addition to checking their values,
+the pre-install policy now rejects duplicate and whitespace-variant
+forms such as `runs-on : self-hosted` and
+`timeout-minutes : 0`. Such YAML mappings could otherwise alter the
+effective runner or runtime limit without matching canonical-key scans.
+
+Negative regression tests cover added, replaced and reordered
+variants. These safeguards are in-workflow textual checks and do
+not supersede independent rulesets, review or branch protection.
+GO-13 HOLD / DENY.
