@@ -62,6 +62,15 @@ export function checkCiActionPins(workflow) {
     return ['Missing GitHub Actions workflow'];
   }
   const errors = [];
+  // Refuse alternate root-level keys, duplicates and reordered policy
+  // sections. A changed root key could alter workflow behavior without
+  // changing any approved action or verification step.
+  const topLevelKeys = [...workflow.matchAll(/^([A-Za-z][A-Za-z0-9_-]*)[ \t]*:/gm)]
+    .map((match) => match[1]);
+  const expectedTopLevelKeys = ['name', 'on', 'permissions', 'concurrency', 'jobs'];
+  if (JSON.stringify(topLevelKeys) !== JSON.stringify(expectedTopLevelKeys)) {
+    errors.push('CI root keys differ from the reviewed workflow structure');
+  }
   const refs = [...workflow.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm)].map((match) => match[1]);
   // A YAML key may legally contain whitespace before ':'. The canonical
   // uses: regex above intentionally enforces one spelling; now reject every
