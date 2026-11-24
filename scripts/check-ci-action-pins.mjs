@@ -80,6 +80,18 @@ export function checkCiActionPins(workflow) {
   if (quotedSecurityKeys.length > 0) {
     errors.push('Quoted CI security key detected: ' + quotedSecurityKeys.join(', '));
   }
+  // YAML anchors, aliases and merge mappings can indirect configuration
+  // through other keys. This canonical CI workflow has no such constructs.
+  // Match YAML mappings only, avoiding shell content and comment prose.
+  const yamlMergeKeys = [...workflow.matchAll(
+    /^[ \t]*-?[ \t]*<<[ \t]*:/gm,
+  )];
+  const yamlReferences = [...workflow.matchAll(
+    /^[ \t]*-?[ \t]*(?:[A-Za-z_][A-Za-z0-9_-]*|['"][^'"\n]+['"])[ \t]*:[ \t]*[&*][A-Za-z0-9_-]+(?:[ \t]*(?:#.*)?)?$/gm,
+  )];
+  if (yamlMergeKeys.length || yamlReferences.length) {
+    errors.push('YAML anchors, aliases or merge keys are not approved in CI');
+  }
   const refs = [...workflow.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm)].map((match) => match[1]);
   // A YAML key may legally contain whitespace before ':'. The canonical
   // uses: regex above intentionally enforces one spelling; now reject every
