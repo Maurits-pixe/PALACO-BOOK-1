@@ -636,3 +636,14 @@ fixtures cover explicit keys at workflow, job and Action-input levels.
 
 This is a conservative textual guard and does not provide full semantic
 YAML verification or independent repository protection. GO-13 HOLD / DENY.
+
+## CI #723 regression and corrective action
+
+CI #723 failed during the pinned-Action preflight because the initial
+explicit-key regular expression inadvertently matched blank lines. The
+checker has been corrected to recognize a literal YAML `?` indicator
+rather than an optional backslash. A positive regression fixture now
+requires ordinary blank lines and comments to pass, while the earlier
+negative fixtures continue to require explicit mapping keys to fail.
+A failure is not evidence of a passing build; rerun verification is
+mandatory. GO-13 HOLD / DENY.
