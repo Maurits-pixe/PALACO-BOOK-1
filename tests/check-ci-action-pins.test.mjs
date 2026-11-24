@@ -28,9 +28,13 @@ jobs:
       - name: Check pinned Actions and checkout credential policy
       - name: Upload inventory
         uses: actions/upload-artifact@${upload} # approved
+        with:
+          name: reviewed-evidence
       - name: Upload sanitized npm audit summary
         if: always()
         uses: actions/upload-artifact@${upload} # approved
+        with:
+          name: reviewed-evidence
 `;
 
 test('accepts exactly approved action SHAs, usage counts and credential policy', () => {
@@ -431,4 +435,26 @@ test('blocks step IDs and output references that alter evidence dataflow', () =>
     assert.ok(checkCiActionPins(changed).some((error) =>
       error.includes('Unreviewed CI job or step dataflow key')), added);
   }
+});
+
+test('rejects duplicate action input maps and unreviewed whitespace variants', () => {
+  for (const changed of [
+    good.replace('          node-version: 22\n',
+      '          node-version: 22\n        with:\n          token: secret\n'),
+    good.replace('        with:\n          node-version: 22',
+      '        with :\n          node-version: 22'),
+    good.replace('        with:\n          name: reviewed-evidence',
+      '        with  :\n          name: reviewed-evidence'),
+    good.replace('        with:\n          name: reviewed-evidence',
+      '        "with":\n          name: reviewed-evidence'),
+  ]) {
+    assert.ok(checkCiActionPins(changed).some((error) =>
+      error.includes('Action input maps must be canonical')), changed);
+  }
+});
+
+test('rejects missing action input maps for artifact publication', () => {
+  const missing = good.replace('        with:\n          name: reviewed-evidence\n', '');
+  assert.ok(checkCiActionPins(missing).some((error) =>
+    error.includes('Action input maps must be canonical')));
 });
