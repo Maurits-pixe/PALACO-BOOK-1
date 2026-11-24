@@ -510,3 +510,18 @@ This guard operates on the committed workflow text; it does not
 provide complete YAML parsing or independent policy enforcement.
 Legacy workflows are subject to content-drift checks only and
 continue to require their own security review. GO-13 HOLD / DENY.
+
+## YAML anchor, alias and merge indirection
+
+The reviewed CI workflow does not use YAML anchors (`&name`),
+aliases (`*name`) or merge keys (`<<:`). The pre-install
+Action-policy check now rejects those constructs when used as YAML
+mapping values or merge keys. This reduces the risk that a configuration
+change is hidden behind indirection instead of appearing as a reviewed
+plain mapping. Two negative regression scenarios cover anchors,
+aliases, quoted mapping keys and merge-key spelling variants.
+
+The check is intentionally narrow and text-based, not a general YAML
+parser or proof of the workflow's actual interpreted semantics.
+Repository rulesets, protected branches, restricted workflow permissions
+and independent review remain necessary. GO-13 HOLD / DENY.
