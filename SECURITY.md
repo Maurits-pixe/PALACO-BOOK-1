@@ -525,3 +525,17 @@ The check is intentionally narrow and text-based, not a general YAML
 parser or proof of the workflow's actual interpreted semantics.
 Repository rulesets, protected branches, restricted workflow permissions
 and independent review remain necessary. GO-13 HOLD / DENY.
+
+## Single-document YAML boundary
+
+The reviewed `ci.yml` uses one plain YAML document with space-based
+indentation. The CI Action-policy preflight rejects document separators
+(`---`, `...`), YAML `%YAML`/`%TAG` directives and tab indentation.
+These constructs are outside the canonical text-scanning policy, and
+must not introduce alternative parsing behavior or a second document
+that is not covered by the verified action and step inventory.
+
+Negative regression tests cover appended documents, document markers,
+directives, and indentation changes. This is a limited textual
+consistency check rather than a complete YAML parser or an independent
+GitHub policy boundary. GO-13 remains HOLD / DENY.
