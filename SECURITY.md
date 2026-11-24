@@ -669,3 +669,15 @@ but it does **not** prove that all tests will finish within the overall
 job limit or that a timed-out child process has no descendants. Reviewers
 must inspect the new GitHub Actions run and resolve any failing test.
 GO-13 remains DRAFT / HOLD / DENY.
+
+## CI #734 checkout scanner boundedness
+
+CI #734 **FAILED** after the bounded runner identified
+`check-ci-action-pins.test.mjs` as timing out after 90 seconds, with no
+completed test case. The earlier checkout validator used an ambiguous
+repeated whitespace/line regex. Its checkout shape check has been replaced
+with a strictly line-anchored, fixed three-line matcher; the separate
+reviewed setup-input sequence check continues to protect both setup Actions.
+A negative performance regression fixture checks a large malformed input.
+This is a targeted mitigation, not a guarantee against all ReDoS elsewhere.
+Full CI remains mandatory, and GO-13 remains HOLD / DENY.
