@@ -536,3 +536,10 @@ test('rejects explicit YAML mapping keys in job and action configuration', () =>
   }
   assert.deepEqual(checkCiActionPins(good), []);
 });
+
+test('explicit-key check allows blank lines, comments and ordinary query-mark text', () => {
+  const harmless = good.replace('on:\\n',
+    'on:\\n\\n  # ? question in a comment\\n');
+  assert.deepEqual(checkCiActionPins(harmless), []);
+  assert.deepEqual(checkCiActionPins(good), []);
+});
