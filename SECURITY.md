@@ -598,3 +598,17 @@ Negative regression tests cover added, replaced and reordered
 variants. These safeguards are in-workflow textual checks and do
 not supersede independent rulesets, review or branch protection.
 GO-13 HOLD / DENY.
+
+## Canonical CI workflow encoding
+
+The reviewed `.github/workflows/ci.yml` is plain UTF-8-compatible
+text with LF line endings. The Action-policy preflight now rejects
+a leading byte-order mark (BOM), carriage returns (including CRLF)
+and noncanonical ASCII control characters. Such invisible characters
+can change text-scanner assumptions or create differences between
+inspection tools. Negative regression tests cover BOM, CRLF, CR-only
+and embedded controls, while preserving the approved LF-only workflow.
+
+This does not establish an independent attestation of the workflow
+bytes or replace semantic YAML review and repository protections.
+GO-13 remains HOLD / DENY.
