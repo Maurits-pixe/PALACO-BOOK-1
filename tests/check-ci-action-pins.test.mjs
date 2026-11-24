@@ -507,3 +507,17 @@ test('rejects invisible control bytes inserted into YAML mapping lines', () => {
   assert.equal(checkCiActionPins(good).some((e) =>
     e.includes('noncanonical control character')), false);
 });
+
+// Quoted Action-input mappings are semantically equivalent YAML keys.
+// A second quoted "with" must not override the reviewed input map.
+test('rejects quoted Action input mapping keys, including shadow maps', () => {
+  for (const key of ["'with':", '"with":']) {
+    const shadow = good.replace(
+      '          persist-credentials: false',
+      '          persist-credentials: false\\n        ' + key + '\\n          persist-credentials: true',
+    );
+    assert.ok(checkCiActionPins(shadow).some((error) => error.includes('Quoted CI security key')), key);
+    const replacement = good.replace('        with:', '        ' + key);
+    assert.ok(checkCiActionPins(replacement).some((error) => error.includes('Quoted CI security key')), key);
+  }
+});
