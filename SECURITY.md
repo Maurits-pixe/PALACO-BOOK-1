@@ -539,3 +539,19 @@ Negative regression tests cover appended documents, document markers,
 directives, and indentation changes. This is a limited textual
 consistency check rather than a complete YAML parser or an independent
 GitHub policy boundary. GO-13 remains HOLD / DENY.
+
+## Canonical CI step mapping and labels
+
+The CI step-order validator now requires exactly one canonical
+`steps:` mapping at the reviewed indentation, and exactly the reviewed
+set of named steps written as `- name:`. Duplicate `steps:` blocks,
+valid YAML alternatives like `steps :` and `name :`, and additional
+unreviewed step-name mappings are rejected. These changes prevent
+alternate YAML key spellings from silently changing the set of
+executed verification steps while the strict step-label comparison
+still appears to match.
+
+Regression tests cover injected, renamed, missing and duplicate
+step metadata. This remains an in-workflow text consistency check,
+not a YAML parser or independent branch-protection control.
+GO-13 remains HOLD / DENY.
