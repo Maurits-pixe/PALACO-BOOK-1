@@ -458,3 +458,31 @@ test('rejects missing action input maps for artifact publication', () => {
   assert.ok(checkCiActionPins(missing).some((error) =>
     error.includes('Action input maps must be canonical')));
 });
+
+test('rejects runner overrides hidden by YAML whitespace before colon', () => {
+  for (const changed of [
+    good.replace('    runs-on: ubuntu-24.04\n',
+      '    runs-on: ubuntu-24.04\n    runs-on : self-hosted\n'),
+    good.replace('    runs-on: ubuntu-24.04',
+      '    runs-on : ubuntu-24.04'),
+    good.replace('    timeout-minutes: 20\n',
+      '    runs-on : self-hosted\n    timeout-minutes: 20\n'),
+  ]) {
+    assert.ok(checkCiActionPins(changed).some((e) =>
+      e.includes('Noncanonical or duplicate CI runs-on key')), changed);
+  }
+});
+
+test('rejects timeout overrides hidden by YAML whitespace before colon', () => {
+  for (const changed of [
+    good.replace('    timeout-minutes: 20\n',
+      '    timeout-minutes: 20\n    timeout-minutes : 0\n'),
+    good.replace('    timeout-minutes: 20',
+      '    timeout-minutes : 20'),
+    good.replace('    timeout-minutes: 20\n',
+      '    timeout-minutes : 120\n    timeout-minutes: 20\n'),
+  ]) {
+    assert.ok(checkCiActionPins(changed).some((e) =>
+      e.includes('Noncanonical or duplicate CI timeout-minutes key')), changed);
+  }
+});
