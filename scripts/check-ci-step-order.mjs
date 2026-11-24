@@ -41,6 +41,20 @@ export function checkCiStepOrder(workflow) {
   if (JSON.stringify(names) !== JSON.stringify(REQUIRED_STEPS)) {
     errors.push('Required CI steps are missing, duplicated, reordered or unexpected');
   }
+  // Duplicate or alternatively spelled YAML step-name/steps mappings can
+  // alter how GitHub interprets the job without changing our recognized
+  // ordered labels. Require canonical step metadata and one steps block.
+  const stepNameKeys = [...workflow.matchAll(/^[ \t]*-[ \t]*name[ \t]*:/gm)];
+  const canonicalStepNameKeys = [...workflow.matchAll(/^      - name:/gm)];
+  if (stepNameKeys.length !== canonicalStepNameKeys.length ||
+      canonicalStepNameKeys.length !== REQUIRED_STEPS.length) {
+    errors.push('Noncanonical, duplicated or unreviewed step name key detected');
+  }
+  const stepsKeys = [...workflow.matchAll(/^[ \t]*steps[ \t]*:/gm)];
+  const canonicalSteps = [...workflow.matchAll(/^    steps:$/gm)];
+  if (stepsKeys.length !== 1 || canonicalSteps.length !== 1) {
+    errors.push('CI must contain exactly one canonical steps mapping');
+  }
   const unnamedCommands = [...workflow.matchAll(/^\s+- run\s*:/gm)];
   if (unnamedCommands.length !== 0) {
     errors.push('Unnamed run steps are prohibited');
