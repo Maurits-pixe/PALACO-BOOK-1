@@ -543,3 +543,13 @@ test('explicit-key check allows blank lines, comments and ordinary query-mark te
   assert.deepEqual(checkCiActionPins(harmless), []);
   assert.deepEqual(checkCiActionPins(good), []);
 });
+
+// A failed checkout map must not force a pathological backtracking search.
+test('checkout validation fails promptly on long or missing credential maps', () => {
+  const padding = '          unrelated: value\\n'.repeat(1500);
+  const mutated = good.replace('          persist-credentials: false', padding + '          persist-credentials: true');
+  const start = performance.now();
+  assert.ok(checkCiActionPins(mutated).some((error) =>
+    error.includes('Checkout must set persist-credentials: false')));
+  assert.ok(performance.now() - start < 2500, 'checkout scanner should remain bounded');
+});
