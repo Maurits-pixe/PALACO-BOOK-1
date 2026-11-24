@@ -105,3 +105,28 @@ test('rejects hidden run commands using YAML key spacing variants', () => {
       error.includes('Noncanonical or unreviewed run key')));
   }
 });
+
+test('rejects extra or renamed shell overrides outside approved audit step', () => {
+  for (const workflow of [
+    approved.replace('        run: npm test',
+      '        shell: bash\n        run: npm test'),
+    approved.replace('        run: npm run build',
+      '        shell : pwsh\n        run: npm run build'),
+    approved.replace('        shell: bash\n        run: |',
+      '        shell : bash\n        run: |'),
+    approved.replace('        shell: bash\n        run: |',
+      '        run: |'),
+  ]) {
+    assert.ok(checkCiStepOrder(workflow).some((e) =>
+      e.includes('reviewed bash shell override')));
+  }
+});
+
+test('rejects workdir overrides that redirect approved verification commands', () => {
+  for (const key of ['working-directory', 'working-directory ', 'working-directory  ']) {
+    const modified = approved.replace('        run: npm test',
+      `        ${key}: ./unreviewed\n        run: npm test`);
+    assert.ok(checkCiStepOrder(modified).some((e) =>
+      e.includes('working-directory override')));
+  }
+});
