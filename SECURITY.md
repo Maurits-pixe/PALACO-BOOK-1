@@ -555,3 +555,17 @@ Regression tests cover injected, renamed, missing and duplicate
 step metadata. This remains an in-workflow text consistency check,
 not a YAML parser or independent branch-protection control.
 GO-13 remains HOLD / DENY.
+
+## No unreviewed CI dataflow
+
+The canonical verification job has no `needs` dependencies, `outputs`
+mappings or step `id` fields. The pre-install policy rejects these
+keys, including whitespace-variant and quoted YAML spellings. New
+job dependencies, step output references or exported result mappings
+would require a separately reviewed contract rather than silently
+changing execution or evidence lineage.
+
+Two negative regression scenarios exercise job-level `needs` and
+`outputs` as well as injected step IDs and output mappings. This
+is an internal textual policy guard, not a full YAML parser or an
+independent branch protection rule. GO-13 remains HOLD / DENY.
