@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planTestFiles, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
+import { planTestFiles, validateTestFileTypes, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
 
 test('discovers every JS and TS test file, sorted without filtering permitted suites', () => {
   const files = planTestFiles(['z.test.ts', 'README.md', 'b.test.mjs', 'a.test.mjs']);
@@ -18,4 +18,17 @@ test('refuses missing language suites and does not treat arbitrary files as test
 test('test execution remains explicitly bounded', () => {
   assert.ok(TEST_TIMEOUT_MS > 0);
   assert.ok(TEST_TIMEOUT_MS <= 120_000);
+});
+
+test('refuses symlink or directory entries impersonating mandatory test files', () => {
+  const planned = planTestFiles(['ok.test.mjs', 'ok.test.ts']);
+  const regular = { isFile: () => true, isSymbolicLink: () => false };
+  assert.doesNotThrow(() => validateTestFileTypes(planned, () => regular));
+  assert.throws(() => validateTestFileTypes(planned, (name) =>
+    name.endsWith('.test.ts')
+      ? { isFile: () => false, isSymbolicLink: () => true }
+      : regular), /not a regular file/);
+  assert.throws(() => validateTestFileTypes(planned, () =>
+    ({ isFile: () => false, isSymbolicLink: () => false })), /not a regular file/);
+  assert.throws(() => validateTestFileTypes(planned, () => null), /not a regular file/);
 });
