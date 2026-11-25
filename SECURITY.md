@@ -692,3 +692,15 @@ intended `? key` YAML lines. The test fixtures have been corrected without
 weakening the existing explicit-key indicator guard. The failed CI run
 remains failed, and the new HEAD requires complete independent CI
 verification. GO-13 remains DRAFT / HOLD / DENY.
+
+## Phase 61: Reject nonregular test entries
+
+The bounded CI test runner now checks every discovered mandatory test
+entry with `lstatSync` before execution and rejects symbolic links,
+directories and other nonregular filesystem entries with an explicit
+test-discovery failure. This reduces the risk of unexpectedly running a
+test target outside the reviewed `tests` tree via a symlink. Negative
+regressions cover symlinks, directories, missing metadata and valid
+regular files. The 90-second per-test bound and 20-minute CI job bound
+remain unchanged. This is not a general filesystem sandbox and does not
+prevent races between the type check and execution. GO-13 HOLD / DENY.
