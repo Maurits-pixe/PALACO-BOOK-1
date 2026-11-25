@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fail closed and identify the exact test file that stalls CI.
 // All .test.mjs and .test.ts files are mandatory; no retries or skips.
-import { readdirSync } from 'node:fs';
+import { readdirSync, lstatSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -24,10 +24,22 @@ export function planTestFiles(filenames) {
   }));
 }
 
+// Never follow symbolic links or execute directories masquerading as test files.
+// The callback makes this rule independently testable without changing the runner.
+export function validateTestFileTypes(planned, inspect) {
+  for (const { name } of planned) {
+    const metadata = inspect(name);
+    if (!metadata || !metadata.isFile() || metadata.isSymbolicLink()) {
+      throw new Error('Test entry is not a regular file: ' + name);
+    }
+  }
+}
+
 export function main() {
   let planned;
   try {
     planned = planTestFiles(readdirSync(resolve('tests')));
+    validateTestFileTypes(planned, (name) => lstatSync(resolve('tests', name)));
   } catch (error) {
     console.error('Test discovery FAILED:', error.message);
     return 2;
