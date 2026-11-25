@@ -704,3 +704,17 @@ regressions cover symlinks, directories, missing metadata and valid
 regular files. The 90-second per-test bound and 20-minute CI job bound
 remain unchanged. This is not a general filesystem sandbox and does not
 prevent races between the type check and execution. GO-13 HOLD / DENY.
+
+## Phase 62: Mandatory tests-root type check
+
+The bounded test runner now uses `lstatSync` to require the `tests`
+root itself to be a non-symlink directory before enumerating or running
+test files. This supplements the per-entry regular-file checks from
+phase 61; a symbolic link at the parent directory would otherwise bypass
+those per-entry checks. Regression tests cover a legitimate directory,
+a symbolic link, a regular file and missing metadata.
+
+The control is fail-closed but not a sandbox, and a filesystem change
+between verification and execution remains possible. The 90-second
+per-file test timeout and 20-minute CI job limit remain unchanged.
+GO-13 HOLD / DENY; no merge or deployment.
