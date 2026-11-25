@@ -35,9 +35,17 @@ export function validateTestFileTypes(planned, inspect) {
   }
 }
 
+// The tests directory itself must not redirect discovery through a symlink.
+export function validateTestDirectory(metadata) {
+  if (!metadata || !metadata.isDirectory() || metadata.isSymbolicLink()) {
+    throw new Error('Tests root is not a regular directory');
+  }
+}
+
 export function main() {
   let planned;
   try {
+    validateTestDirectory(lstatSync(resolve('tests')));
     planned = planTestFiles(readdirSync(resolve('tests')));
     validateTestFileTypes(planned, (name) => lstatSync(resolve('tests', name)));
   } catch (error) {
