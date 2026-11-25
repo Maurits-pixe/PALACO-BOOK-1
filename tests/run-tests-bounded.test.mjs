@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planTestFiles, validateTestFileTypes, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
+import { planTestFiles, validateTestDirectory, validateTestFileTypes, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
 
 test('discovers every JS and TS test file, sorted without filtering permitted suites', () => {
   const files = planTestFiles(['z.test.ts', 'README.md', 'b.test.mjs', 'a.test.mjs']);
@@ -31,4 +31,16 @@ test('refuses symlink or directory entries impersonating mandatory test files', 
   assert.throws(() => validateTestFileTypes(planned, () =>
     ({ isFile: () => false, isSymbolicLink: () => false })), /not a regular file/);
   assert.throws(() => validateTestFileTypes(planned, () => null), /not a regular file/);
+});
+
+test('refuses symlinked or non-directory test roots', () => {
+  const dir = { isDirectory: () => true, isSymbolicLink: () => false };
+  assert.doesNotThrow(() => validateTestDirectory(dir));
+  assert.throws(() => validateTestDirectory({
+    isDirectory: () => true, isSymbolicLink: () => true,
+  }), /not a regular directory/);
+  assert.throws(() => validateTestDirectory({
+    isDirectory: () => false, isSymbolicLink: () => false,
+  }), /not a regular directory/);
+  assert.throws(() => validateTestDirectory(null), /not a regular directory/);
 });
