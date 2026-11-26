@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planTestFiles, validateTestDirectory, validateTestFileTypes, validateTrackedTestInventory, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
+import { planTestFiles, validateTestDirectory, validateTestFileTypes, validateTrackedTestInventory, verifyCleanTestSources, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
 
 test('discovers every JS and TS test file, sorted without filtering permitted suites', () => {
   const files = planTestFiles(['z.test.ts', 'README.md', 'b.test.mjs', 'a.test.mjs']);
@@ -79,4 +79,17 @@ test('tracked inventory recognizes only direct JS/TS test paths', () => {
   assert.throws(() => validateTrackedTestInventory(planned,
     ['tests/alpha.test.mjs', 'tests/nested/beta.test.ts']),
     /differ from tracked Git inventory/);
+});
+
+test('tracked test source verification fails closed on drift and Git errors', () => {
+  assert.doesNotThrow(() => verifyCleanTestSources({ status: 0, signal: null, error: null }));
+  assert.throws(() => verifyCleanTestSources({ status: 1, signal: null, error: null }),
+    /differ from checkout HEAD/);
+  assert.throws(() => verifyCleanTestSources({ status: 128, signal: null, error: null }),
+    /Git check failed/);
+  assert.throws(() => verifyCleanTestSources({ status: null, signal: 'SIGKILL' }),
+    /Git check failed/);
+  assert.throws(() => verifyCleanTestSources({ status: null, error: { code: 'ETIMEDOUT' } }),
+    /Git check failed/);
+  assert.throws(() => verifyCleanTestSources(null), /Git check failed/);
 });
