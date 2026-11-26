@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planTestFiles, validateTestDirectory, validateTestFileTypes, validateTrackedTestInventory, verifyCleanTestSources, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
+import { planTestFiles, validateTestDirectory, validateTestFileTypes, validateTrackedTestInventory, verifyCleanTestSources, TEST_INTEGRITY_PATHS, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
 
 test('discovers every JS and TS test file, sorted without filtering permitted suites', () => {
   const files = planTestFiles(['z.test.ts', 'README.md', 'b.test.mjs', 'a.test.mjs']);
@@ -92,4 +92,13 @@ test('tracked test source verification fails closed on drift and Git errors', ()
   assert.throws(() => verifyCleanTestSources({ status: null, error: { code: 'ETIMEDOUT' } }),
     /Git check failed/);
   assert.throws(() => verifyCleanTestSources(null), /Git check failed/);
+});
+
+test('test integrity scope includes runner and npm entrypoint alongside tests', () => {
+  assert.deepEqual([...TEST_INTEGRITY_PATHS], [
+    'tests',
+    'scripts/run-tests-bounded.mjs',
+    'package.json',
+  ]);
+  assert.ok(Object.isFrozen(TEST_INTEGRITY_PATHS));
 });
