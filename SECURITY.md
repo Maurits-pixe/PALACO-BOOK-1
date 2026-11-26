@@ -747,3 +747,20 @@ nested/non-test paths, and missing required test entries.
 
 No mandatory checks were removed. A new full CI run must verify the
 repair on its exact commit. GO-13 DRAFT / HOLD / DENY.
+
+## Phase 65: HEAD-bound test source integrity
+
+CI #762 succeeded on the phase-64 HEAD. The bounded test runner
+now checks `git diff HEAD --quiet -- tests` before the suite, immediately
+before each test file, and after each successful test file. Both staged
+and unstaged modifications to tracked test sources cause a fail-closed
+error. The Git check itself has a five-second timeout; Git errors,
+signals and unexpected exit statuses fail rather than being ignored.
+
+This prevents a test from altering tracked test sources while a later
+test silently consumes those changes. Untracked test files are still
+controlled by the separate Git-index inventory check. The comparison
+is to local HEAD, not a remote attestation; filesystem races and
+untrusted Git/runtime execution remain outside the guarantee. The
+existing 90-second per-file and 20-minute overall job limits remain.
+GO-13 stays DRAFT / HOLD / DENY.
