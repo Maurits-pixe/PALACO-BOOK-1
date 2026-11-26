@@ -64,3 +64,19 @@ test('Git index test inventory must exactly match filesystem discovery', () => {
   assert.throws(() => validateTrackedTestInventory(planned, []),
     /differ from tracked/);
 });
+
+test('tracked inventory recognizes only direct JS/TS test paths', () => {
+  const planned = planTestFiles(['alpha.test.mjs', 'beta.test.ts']);
+  const indexed = [
+    'tests/alpha.test.mjs',
+    'tests/beta.test.ts',
+    'tests/nested/ignored.test.ts',
+    'tests/ignore.test.mjs.bak',
+    'tests/spec.test.ts/child',
+    'tests/not-a-test.ts',
+  ];
+  assert.doesNotThrow(() => validateTrackedTestInventory(planned, indexed));
+  assert.throws(() => validateTrackedTestInventory(planned,
+    ['tests/alpha.test.mjs', 'tests/nested/beta.test.ts']),
+    /differ from tracked Git inventory/);
+});
