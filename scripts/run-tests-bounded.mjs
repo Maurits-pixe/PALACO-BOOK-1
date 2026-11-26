@@ -41,7 +41,9 @@ export function validateTrackedTestInventory(planned, trackedPaths) {
   // Recursive test files are outside the approved flat-suite layout.
   // Refuse them instead of silently excluding them from execution.
   const nested = trackedPaths.filter((path) =>
-    /^tests\\/(?:[^/]+\\/)+[^/]+\\.test\\.(?:mjs|ts)$/.test(path));
+    path.startsWith('tests/') &&
+    path.slice('tests/'.length).includes('/') &&
+    (path.endsWith('.test.mjs') || path.endsWith('.test.ts')));
   if (nested.length > 0) {
     throw new Error('Nested tracked test files are not approved');
   }
