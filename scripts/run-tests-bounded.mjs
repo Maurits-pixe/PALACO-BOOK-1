@@ -60,6 +60,24 @@ export function validateTestDirectory(metadata) {
   }
 }
 
+// Compare working test sources with the checked-out commit, including staged
+// and unstaged edits. Status 1 (drift) and Git failures both fail closed.
+export function verifyCleanTestSources(result) {
+  if (!result || result.error || result.signal || result.status !== 0) {
+    throw new Error('Tracked test sources differ from checkout HEAD or Git check failed');
+  }
+}
+
+function checkTestSourceIntegrity() {
+  verifyCleanTestSources(spawnSync('git',
+    ['diff', 'HEAD', '--quiet', '--', 'tests'], {
+      cwd: process.cwd(),
+      stdio: 'ignore',
+      timeout: 5000,
+      killSignal: 'SIGKILL',
+    }));
+}
+
 export function main() {
   let planned;
   try {
@@ -73,12 +91,19 @@ export function main() {
       });
     validateTrackedTestInventory(planned, trackedOutput.split('\0').filter(Boolean));
     validateTestFileTypes(planned, (name) => lstatSync(resolve('tests', name)));
+    checkTestSourceIntegrity();
   } catch (error) {
     console.error('Test discovery FAILED:', error.message);
     return 2;
   }
   console.log('Required test files:', planned.length);
   for (const { name, args } of planned) {
+    try {
+      checkTestSourceIntegrity();
+    } catch (error) {
+      console.error('Test integrity FAILED before execution:', error.message);
+      return 1;
+    }
     console.log('RUN TEST FILE:', name);
     const result = spawnSync(process.execPath, args, {
       cwd: process.cwd(),
@@ -91,6 +116,12 @@ export function main() {
         'status=' + String(result.status),
         'signal=' + String(result.signal),
         'error=' + (result.error?.code ?? 'none'));
+      return 1;
+    }
+    try {
+      checkTestSourceIntegrity();
+    } catch (error) {
+      console.error('Test integrity FAILED after execution:', name, error.message);
       return 1;
     }
     console.log('PASS TEST FILE:', name);
