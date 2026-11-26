@@ -1,0 +1,157 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { checkCiStepOrder, REQUIRED_STEPS } from '../scripts/check-ci-step-order.mjs';
+
+const approved = readFileSync('.github/workflows/ci.yml', 'utf8');
+
+test('accepts the current reviewed CI verification sequence', () => {
+  assert.equal(REQUIRED_STEPS.length, 19);
+  assert.deepEqual(checkCiStepOrder(approved), []);
+});
+
+test('rejects reordered or missing required verification gates', () => {
+  const reordered = approved.replace(
+    '      - name: Typecheck\n        run: npm run typecheck\n      - name: Unit and integration tests\n        run: npm test',
+    '      - name: Unit and integration tests\n        run: npm test\n      - name: Typecheck\n        run: npm run typecheck',
+  );
+  assert.ok(checkCiStepOrder(reordered).some((e) => e.includes('reordered')));
+  const missing = approved.replace('      - name: Build\n        run: npm run build\n', '');
+  assert.ok(checkCiStepOrder(missing).some((e) => e.includes('missing')));
+});
+
+test('rejects renamed gate masking an altered run command', () => {
+  const altered = approved.replace('run: npm ci', 'run: npm install --ignore-scripts');
+  assert.ok(checkCiStepOrder(altered).some((e) => e.includes('commands')));
+  const audit = approved.replace('npm audit --json --audit-level=low', 'npm audit --json --audit-level=critical');
+  assert.ok(checkCiStepOrder(audit).some((e) => e.includes('vulnerability scan')));
+});
+
+test('rejects extra jobs and unnamed shell commands', () => {
+  const extraJob = approved + '\n  unauthorized:\n    runs-on: ubuntu-24.04\n';
+  assert.ok(checkCiStepOrder(extraJob).some((e) => e.includes('one verify job')));
+  const unnamed = approved.replace('      - name: Typecheck', '      - run: echo bypass\n      - name: Typecheck');
+  assert.ok(checkCiStepOrder(unnamed).some((e) => e.includes('Unnamed')));
+  assert.ok(checkCiStepOrder('').length);
+});
+
+test('rejects audit shell injection while retaining all expected commands', () => {
+  const injected = approved.replace(
+    '          set -e\n',
+    '          echo "bypass audit"\n          set -e\n',
+  );
+  assert.ok(checkCiStepOrder(injected).some((error) =>
+    error.includes('shell body')));
+});
+
+test('rejects reordered scanner exit handling and missing raw evidence cleanup', () => {
+  const reorder = approved.replace(
+    '          audit_exit=$?\n          set -e\n',
+    '          set -e\n          audit_exit=$?\n',
+  );
+  assert.ok(checkCiStepOrder(reorder).some((error) =>
+    error.includes('shell body')));
+  const missingTrap = approved.replace(
+    "          trap 'rm -f npm-audit.raw.json' EXIT\n", '',
+  );
+  assert.ok(checkCiStepOrder(missingTrap).some((error) =>
+    error.includes('shell body')));
+});
+
+test('rejects different audit shell, not just missing command fragments', () => {
+  const alternateShell = approved.replace(
+    '        shell: bash\n        run: |\n',
+    '        shell: sh\n        run: |\n',
+  );
+  assert.ok(checkCiStepOrder(alternateShell).some((error) =>
+    error.includes('shell body')));
+});
+
+test('accepts only the reviewed sanitized artifact file paths', () => {
+  assert.deepEqual(checkCiStepOrder(approved), []);
+  for (const changed of [
+    approved.replace('path: npm-dependency-inventory.json', 'path: .'),
+    approved.replace('path: npm-audit-summary.json', 'path: npm-audit.raw.json'),
+    approved.replace('name: npm-audit-summary\n', 'name: unreviewed-audit\n'),
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((error) =>
+      error.includes('artifact publication')));
+  }
+});
+
+test('blocks altered evidence retention, missing-file policy and extra upload parameters', () => {
+  for (const changed of [
+    approved.replace('retention-days: 7', 'retention-days: 90'),
+    approved.replace('if-no-files-found: error', 'if-no-files-found: warn'),
+    approved.replace('if-no-files-found: warn', 'if-no-files-found: ignore'),
+    approved.replace('          name: npm-audit-summary', '          overwrite: true\n          name: npm-audit-summary'),
+    approved + '      - name: Surprise\n        run: echo bad\n',
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((error) =>
+      error.includes('artifact publication')));
+  }
+});
+
+test('rejects hidden run commands using YAML key spacing variants', () => {
+  const cases = [
+    approved.replace('      - name: Typecheck\n',
+      '      - name: Unreviewed shell\n        run : echo bypass\n      - name: Typecheck\n'),
+    approved.replace('    steps:\n',
+      '    steps:\n      - run : echo bypass\n'),
+    approved.replace('        run: npm test', '        run : npm test'),
+  ];
+  for (const workflow of cases) {
+    assert.ok(checkCiStepOrder(workflow).some((error) =>
+      error.includes('Noncanonical or unreviewed run key')));
+  }
+});
+
+test('rejects extra or renamed shell overrides outside approved audit step', () => {
+  for (const workflow of [
+    approved.replace('        run: npm test',
+      '        shell: bash\n        run: npm test'),
+    approved.replace('        run: npm run build',
+      '        shell : pwsh\n        run: npm run build'),
+    approved.replace('        shell: bash\n        run: |',
+      '        shell : bash\n        run: |'),
+    approved.replace('        shell: bash\n        run: |',
+      '        run: |'),
+  ]) {
+    assert.ok(checkCiStepOrder(workflow).some((e) =>
+      e.includes('reviewed bash shell override')));
+  }
+});
+
+test('rejects workdir overrides that redirect approved verification commands', () => {
+  for (const key of ['working-directory', 'working-directory ', 'working-directory  ']) {
+    const modified = approved.replace('        run: npm test',
+      `        ${key}: ./unreviewed\n        run: npm test`);
+    assert.ok(checkCiStepOrder(modified).some((e) =>
+      e.includes('working-directory override')));
+  }
+});
+
+test('rejects noncanonical and duplicate step name keys', () => {
+  for (const changed of [
+    approved.replace('      - name: Typecheck', '      - name : Typecheck'),
+    approved.replace('      - name: Typecheck',
+      '      - name : Hidden step\n      - name: Typecheck'),
+    approved.replace('      - name: Typecheck',
+      '      - name: Extra step\n      - name: Typecheck'),
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((e) =>
+      e.includes('step name key')), changed);
+  }
+});
+
+test('rejects duplicate, renamed or whitespace-variant steps mappings', () => {
+  for (const changed of [
+    approved.replace('    steps:\n', '    steps :\n'),
+    approved.replace('    steps:\n', '    steps:\n    steps:\n'),
+    approved.replace('    steps:\n', '    other: true\n    steps :\n    steps:\n'),
+    approved.replace('    steps:\n', ''),
+  ]) {
+    assert.ok(checkCiStepOrder(changed).some((e) =>
+      e.includes('canonical steps mapping')), changed);
+  }
+});
