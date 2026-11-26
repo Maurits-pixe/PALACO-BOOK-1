@@ -718,3 +718,19 @@ The control is fail-closed but not a sandbox, and a filesystem change
 between verification and execution remains possible. The 90-second
 per-file test timeout and 20-minute CI job limit remain unchanged.
 GO-13 HOLD / DENY; no merge or deployment.
+
+## Phase 63: Git-index-bound test inventory
+
+After CI #753 succeeded on the phase-62 HEAD, the bounded test runner
+was extended to compare every discovered `*.test.mjs` and `*.test.ts`
+file directly against the corresponding tracked paths returned by
+`git ls-files --cached -z -- tests`. Any untracked test insertion,
+missing tracked test, duplicate index entry or failure to read the Git
+index aborts test discovery. The existing file type, symlink and
+per-file timeout checks remain mandatory.
+
+The Git index is part of the checked-out repository, not an independent
+source of trust, and the new check does not prohibit authorized changes
+to the test inventory. It does not prevent filesystem races, nor does
+it replace required branch protection and human review. GO-13 remains
+DRAFT / HOLD / DENY.
