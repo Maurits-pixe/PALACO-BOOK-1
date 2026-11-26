@@ -792,3 +792,17 @@ This guard covers Git-tracked nested test files. It does not recursively
 enumerate arbitrary untracked directories, and does not replace code
 review, Git branch protection, or independent test attestation.
 GO-13 remains DRAFT / HOLD / DENY.
+
+## Phase 68: Stable HEAD throughout the test suite
+
+CI #779 was SUCCESS on the phase-67 HEAD. The bounded runner now
+records the full Git checkout commit identity at suite start and verifies
+that identity before and after each test, with a final post-suite check.
+A changed HEAD, invalid commit identity, failed Git invocation or timeout
+causes a failure rather than relying on a moving `git diff HEAD` target.
+Negative regressions cover changing and malformed identities, and Git
+SHA-1/SHA-256 object formats. Per-Git-call timeout is five seconds.
+
+This prevents unnoticed HEAD movement across check boundaries; it does
+not constitute a remote attestation or eliminate concurrent filesystem
+races. GO-13 remains DRAFT / HOLD / DENY.
