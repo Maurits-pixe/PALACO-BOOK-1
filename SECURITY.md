@@ -734,3 +734,16 @@ source of trust, and the new check does not prohibit authorized changes
 to the test inventory. It does not prevent filesystem races, nor does
 it replace required branch protection and human review. GO-13 remains
 DRAFT / HOLD / DENY.
+
+## Phase 64: Repair CI #757 test-inventory parser
+
+CI #757 failed before tests started: a malformed JavaScript regex in
+`scripts/run-tests-bounded.mjs` caused `SyntaxError: Unexpected token '^'`.
+The pathname regex was corrected to match only direct
+`tests/*.test.mjs` and `tests/*.test.ts` entries. The Git `-z`
+index listing is split on a JavaScript NUL escape, not the literal
+backslash-zero string. Regression cases verify direct paths, ignored
+nested/non-test paths, and missing required test entries.
+
+No mandatory checks were removed. A new full CI run must verify the
+repair on its exact commit. GO-13 DRAFT / HOLD / DENY.
