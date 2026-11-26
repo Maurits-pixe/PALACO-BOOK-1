@@ -8,6 +8,13 @@ import { pathToFileURL } from 'node:url';
 
 export const TEST_TIMEOUT_MS = 90_000;
 
+// Include the test runner and npm test entrypoint in the immutable scope.
+export const TEST_INTEGRITY_PATHS = Object.freeze([
+  'tests',
+  'scripts/run-tests-bounded.mjs',
+  'package.json',
+]);
+
 export function planTestFiles(filenames) {
   const names = filenames
     .filter((name) => /\.test\.(?:mjs|ts)$/.test(name))
@@ -70,7 +77,7 @@ export function verifyCleanTestSources(result) {
 
 function checkTestSourceIntegrity() {
   verifyCleanTestSources(spawnSync('git',
-    ['diff', 'HEAD', '--quiet', '--', 'tests'], {
+    ['diff', 'HEAD', '--quiet', '--', ...TEST_INTEGRITY_PATHS], {
       cwd: process.cwd(),
       stdio: 'ignore',
       timeout: 5000,
