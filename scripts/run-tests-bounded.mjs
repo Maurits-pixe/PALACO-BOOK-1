@@ -32,7 +32,7 @@ export function validateTrackedTestInventory(planned, trackedPaths) {
     throw new Error('Tracked test inventory is unavailable');
   }
   const expected = trackedPaths
-    .filter((path) => /^tests\\/[^/]+\\.test\\.(?:mjs|ts)$/.test(path))
+    .filter((path) => /^tests\/[^/]+\.test\.(?:mjs|ts)$/.test(path))
     .map((path) => path.slice('tests/'.length))
     .sort();
   const actual = planned.map(({ name }) => name).sort();
@@ -71,7 +71,7 @@ export function main() {
         maxBuffer: 8 * 1024 * 1024,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
-    validateTrackedTestInventory(planned, trackedOutput.split('\\0').filter(Boolean));
+    validateTrackedTestInventory(planned, trackedOutput.split('\0').filter(Boolean));
     validateTestFileTypes(planned, (name) => lstatSync(resolve('tests', name)));
   } catch (error) {
     console.error('Test discovery FAILED:', error.message);
