@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planTestFiles, validateTestDirectory, validateTestFileTypes, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
+import { planTestFiles, validateTestDirectory, validateTestFileTypes, validateTrackedTestInventory, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
 
 test('discovers every JS and TS test file, sorted without filtering permitted suites', () => {
   const files = planTestFiles(['z.test.ts', 'README.md', 'b.test.mjs', 'a.test.mjs']);
@@ -43,4 +43,24 @@ test('refuses symlinked or non-directory test roots', () => {
     isDirectory: () => false, isSymbolicLink: () => false,
   }), /not a regular directory/);
   assert.throws(() => validateTestDirectory(null), /not a regular directory/);
+});
+
+test('Git index test inventory must exactly match filesystem discovery', () => {
+  const planned = planTestFiles(['alpha.test.mjs', 'beta.test.ts']);
+  const tracked = ['tests/beta.test.ts', 'README.md', 'tests/alpha.test.mjs'];
+  assert.doesNotThrow(() => validateTrackedTestInventory(planned, tracked));
+  assert.doesNotThrow(() => validateTrackedTestInventory(planned, tracked.slice().reverse()));
+  assert.throws(() => validateTrackedTestInventory(planned, ['tests/alpha.test.mjs']),
+    /differ from tracked/);
+  assert.throws(() => validateTrackedTestInventory(planned,
+    [...tracked, 'tests/extra.test.mjs']), /differ from tracked/);
+  assert.throws(() => validateTrackedTestInventory(planned,
+    ['tests/alpha.test.mjs', 'tests/alpha.test.mjs', 'tests/beta.test.ts']),
+    /differ from tracked/);
+  assert.throws(() => validateTrackedTestInventory(planned, null),
+    /inventory is unavailable/);
+  assert.throws(() => validateTrackedTestInventory(planned, ['tests/alpha.test.mjs', null]),
+    /inventory is unavailable/);
+  assert.throws(() => validateTrackedTestInventory(planned, []),
+    /differ from tracked/);
 });
