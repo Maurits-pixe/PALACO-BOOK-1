@@ -38,6 +38,13 @@ export function validateTrackedTestInventory(planned, trackedPaths) {
       trackedPaths.some((path) => typeof path !== 'string')) {
     throw new Error('Tracked test inventory is unavailable');
   }
+  // Recursive test files are outside the approved flat-suite layout.
+  // Refuse them instead of silently excluding them from execution.
+  const nested = trackedPaths.filter((path) =>
+    /^tests\\/(?:[^/]+\\/)+[^/]+\\.test\\.(?:mjs|ts)$/.test(path));
+  if (nested.length > 0) {
+    throw new Error('Nested tracked test files are not approved');
+  }
   const expected = trackedPaths
     .filter((path) => /^tests\/[^/]+\.test\.(?:mjs|ts)$/.test(path))
     .map((path) => path.slice('tests/'.length))
