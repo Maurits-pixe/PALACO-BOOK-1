@@ -764,3 +764,16 @@ is to local HEAD, not a remote attestation; filesystem races and
 untrusted Git/runtime execution remain outside the guarantee. The
 existing 90-second per-file and 20-minute overall job limits remain.
 GO-13 stays DRAFT / HOLD / DENY.
+
+## Phase 66: Test runner and package entrypoint integrity
+
+CI #767 succeeded on phase-65 HEAD. The HEAD-bound clean-tree check now
+covers not only tracked `tests` sources but also the test runner itself
+(`scripts/run-tests-bounded.mjs`) and `package.json`, which defines
+`npm test`. Before and after every mandatory test file, staged or
+unstaged modifications to any of these paths cause a fail-closed error.
+A regression verifies the exact immutable set of protected paths.
+
+This is a local checked-out-HEAD consistency control, not a remote
+signature or a defense against every filesystem race. The pre-existing
+per-file and job limits remain unchanged. GO-13 HOLD / DENY.
