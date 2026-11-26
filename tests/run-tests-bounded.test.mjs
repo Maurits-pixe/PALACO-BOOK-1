@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planTestFiles, validateTestDirectory, validateTestFileTypes, validateTrackedTestInventory, verifyCleanTestSources, TEST_INTEGRITY_PATHS, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
+import { planTestFiles, validateTestDirectory, validateTestFileTypes, validateTrackedTestInventory, verifyCleanTestSources, verifyCheckoutHead, TEST_INTEGRITY_PATHS, TEST_TIMEOUT_MS } from '../scripts/run-tests-bounded.mjs';
 
 test('discovers every JS and TS test file, sorted without filtering permitted suites', () => {
   const files = planTestFiles(['z.test.ts', 'README.md', 'b.test.mjs', 'a.test.mjs']);
@@ -103,4 +103,16 @@ test('test integrity scope includes runner and npm entrypoint alongside tests', 
     'package.json',
   ]);
   assert.ok(Object.isFrozen(TEST_INTEGRITY_PATHS));
+});
+
+test('Git checkout identity is immutable during mandatory tests', () => {
+  const original = 'a'.repeat(40);
+  const alternate = 'b'.repeat(40);
+  assert.doesNotThrow(() => verifyCheckoutHead(original, original));
+  assert.throws(() => verifyCheckoutHead(original, alternate), /HEAD changed/);
+  assert.throws(() => verifyCheckoutHead(original, ''), /HEAD changed/);
+  assert.throws(() => verifyCheckoutHead('invalid', 'invalid'), /valid commit identity/);
+  assert.throws(() => verifyCheckoutHead('', ''), /valid commit identity/);
+  const sha256 = 'c'.repeat(64);
+  assert.doesNotThrow(() => verifyCheckoutHead(sha256, sha256));
 });
