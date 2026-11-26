@@ -84,7 +84,34 @@ export function verifyCleanTestSources(result) {
   }
 }
 
-function checkTestSourceIntegrity() {
+// Pin HEAD at suite start: otherwise a test could move HEAD and make
+// a later HEAD-relative clean-tree comparison falsely appear valid.
+export function verifyCheckoutHead(expected, observed) {
+  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(expected ?? '') ||
+      expected !== observed) {
+    throw new Error('Git checkout HEAD changed or is not a valid commit identity');
+  }
+}
+
+function readCheckoutHead() {
+  const result = spawnSync('git', ['rev-parse', '--verify', 'HEAD'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    timeout: 5000,
+    killSignal: 'SIGKILL',
+  });
+  if (result.error || result.signal || result.status !== 0) {
+    throw new Error('Cannot verify Git checkout HEAD');
+  }
+  const sha = result.stdout.trim();
+  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(sha)) {
+    throw new Error('Invalid Git checkout HEAD identity');
+  }
+  return sha;
+}
+
+function checkTestSourceIntegrity(expectedHead) {
+  verifyCheckoutHead(expectedHead, readCheckoutHead());
   verifyCleanTestSources(spawnSync('git',
     ['diff', 'HEAD', '--quiet', '--', ...TEST_INTEGRITY_PATHS], {
       cwd: process.cwd(),
@@ -96,6 +123,7 @@ function checkTestSourceIntegrity() {
 
 export function main() {
   let planned;
+  let checkoutHead;
   try {
     validateTestDirectory(lstatSync(resolve('tests')));
     planned = planTestFiles(readdirSync(resolve('tests')));
@@ -107,7 +135,8 @@ export function main() {
       });
     validateTrackedTestInventory(planned, trackedOutput.split('\0').filter(Boolean));
     validateTestFileTypes(planned, (name) => lstatSync(resolve('tests', name)));
-    checkTestSourceIntegrity();
+    checkoutHead = readCheckoutHead();
+    checkTestSourceIntegrity(checkoutHead);
   } catch (error) {
     console.error('Test discovery FAILED:', error.message);
     return 2;
@@ -115,7 +144,7 @@ export function main() {
   console.log('Required test files:', planned.length);
   for (const { name, args } of planned) {
     try {
-      checkTestSourceIntegrity();
+      checkTestSourceIntegrity(checkoutHead);
     } catch (error) {
       console.error('Test integrity FAILED before execution:', error.message);
       return 1;
@@ -135,12 +164,18 @@ export function main() {
       return 1;
     }
     try {
-      checkTestSourceIntegrity();
+      checkTestSourceIntegrity(checkoutHead);
     } catch (error) {
       console.error('Test integrity FAILED after execution:', name, error.message);
       return 1;
     }
     console.log('PASS TEST FILE:', name);
+  }
+  try {
+    verifyCheckoutHead(checkoutHead, readCheckoutHead());
+  } catch (error) {
+    console.error('Final Git checkout identity FAILED:', error.message);
+    return 1;
   }
   console.log('All required JS and TS test files PASS:', planned.length);
   return 0;
