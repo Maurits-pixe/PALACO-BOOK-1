@@ -2,7 +2,7 @@
 // Fail closed and identify the exact test file that stalls CI.
 // All .test.mjs and .test.ts files are mandatory; no retries or skips.
 import { readdirSync, lstatSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -22,6 +22,24 @@ export function planTestFiles(filenames) {
       ? ['--import', 'tsx', '--test', 'tests/' + name]
       : ['--test', 'tests/' + name],
   }));
+}
+
+// Only Git-indexed test files may run. The index and disk must agree
+// exactly, preventing untracked injections and silently missing tracked tests.
+export function validateTrackedTestInventory(planned, trackedPaths) {
+  if (!Array.isArray(trackedPaths) ||
+      trackedPaths.some((path) => typeof path !== 'string')) {
+    throw new Error('Tracked test inventory is unavailable');
+  }
+  const expected = trackedPaths
+    .filter((path) => /^tests\\/[^/]+\\.test\\.(?:mjs|ts)$/.test(path))
+    .map((path) => path.slice('tests/'.length))
+    .sort();
+  const actual = planned.map(({ name }) => name).sort();
+  if (expected.length === 0 ||
+      JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error('Test files differ from tracked Git inventory');
+  }
 }
 
 // Never follow symbolic links or execute directories masquerading as test files.
@@ -47,6 +65,13 @@ export function main() {
   try {
     validateTestDirectory(lstatSync(resolve('tests')));
     planned = planTestFiles(readdirSync(resolve('tests')));
+    const trackedOutput = execFileSync('git',
+      ['ls-files', '--cached', '-z', '--', 'tests'], {
+        encoding: 'utf8',
+        maxBuffer: 8 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    validateTrackedTestInventory(planned, trackedOutput.split('\\0').filter(Boolean));
     validateTestFileTypes(planned, (name) => lstatSync(resolve('tests', name)));
   } catch (error) {
     console.error('Test discovery FAILED:', error.message);
