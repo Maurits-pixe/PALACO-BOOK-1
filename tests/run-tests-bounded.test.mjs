@@ -70,7 +70,6 @@ test('tracked inventory recognizes only direct JS/TS test paths', () => {
   const indexed = [
     'tests/alpha.test.mjs',
     'tests/beta.test.ts',
-    'tests/nested/ignored.test.ts',
     'tests/ignore.test.mjs.bak',
     'tests/spec.test.ts/child',
     'tests/not-a-test.ts',
@@ -78,7 +77,10 @@ test('tracked inventory recognizes only direct JS/TS test paths', () => {
   assert.doesNotThrow(() => validateTrackedTestInventory(planned, indexed));
   assert.throws(() => validateTrackedTestInventory(planned,
     ['tests/alpha.test.mjs', 'tests/nested/beta.test.ts']),
-    /differ from tracked Git inventory/);
+    /Nested tracked test files are not approved/);
+  assert.throws(() => validateTrackedTestInventory(planned,
+    [...indexed, 'tests/deep/more/hidden.test.mjs']),
+    /Nested tracked test files are not approved/);
 });
 
 test('tracked test source verification fails closed on drift and Git errors', () => {
