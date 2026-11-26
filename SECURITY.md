@@ -777,3 +777,18 @@ A regression verifies the exact immutable set of protected paths.
 This is a local checked-out-HEAD consistency control, not a remote
 signature or a defense against every filesystem race. The pre-existing
 per-file and job limits remain unchanged. GO-13 HOLD / DENY.
+
+## Phase 67: Nested tracked test files fail closed
+
+CI #772 succeeded on the phase-66 HEAD. The mandatory test inventory
+now rejects tracked `*.test.mjs` and `*.test.ts` files in nested
+subdirectories of `tests`. Previously, the flat-directory execution
+plan silently ignored such tracked files, potentially leaving new tests
+unexecuted even with green CI. New negative cases cover one-level
+and deeply nested test files; non-test paths still do not enter the
+execution plan.
+
+This guard covers Git-tracked nested test files. It does not recursively
+enumerate arbitrary untracked directories, and does not replace code
+review, Git branch protection, or independent test attestation.
+GO-13 remains DRAFT / HOLD / DENY.
